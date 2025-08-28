@@ -11,7 +11,9 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import Navbar from "../../components/Navbar";
+// Update the import path if Navbar is located elsewhere, for example:
+import Navbar from "../../../components/Navbar";
+// Or create the Navbar.tsx file in the correct directory if it does not exist.
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import RoleSelectionButtons from "./RoleSelectionButtons";
@@ -367,7 +369,7 @@ export default function Register() {
       href="
                           onClick={(e) => {
                             e.preventDefault();
-                            window.location.href = "/login";
+                            window.location.href = "/auth/login";
                             // or use navigation from your framework
                             // navigate('/login');
                           }}
