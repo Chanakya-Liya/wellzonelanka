@@ -12,7 +12,7 @@ import {
   Play,
 } from "lucide-react";
 import { motion } from "framer-motion";
-import Navbar from "@/components/doc-navbar";
+import Navbar from "@/components/Navbar";
 import { Marquee } from "@/components/magicui/marquee";
 import { useState } from "react";
 import { ChatDialog } from "@/components/chatbot/ChatDialog";

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Dumbbell, Users, Camera, ArrowRight } from "lucide-react";
-import Navbar from "@/components/gym-navbar";
+import Navbar from "@/components/Navbar";
 import { Footer } from "./Footer";
 import Sidebar from "../Sidebar";
 
