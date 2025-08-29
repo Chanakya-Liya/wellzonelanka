@@ -31,7 +31,7 @@ export default function Navbar() {
                             </Link>
                         </div> */}
                         <Link href="/contact" className="text-gray-700 hover:text-cyan-600 font-medium transition-colors duration-300 hover:scale-105">Contact us</Link>
-                        <Link href="/doctors-names" className="text-gray-700 hover:text-cyan-600 font-medium transition-colors duration-300 hover:scale-105">Doctors</Link>
+                        <Link href="/doctors/doctors-names" className="text-gray-700 hover:text-cyan-600 font-medium transition-colors duration-300 hover:scale-105">Doctors</Link>
                         <Link href="/auth/login" className="text-gray-700 hover:text-cyan-600 font-medium transition-colors duration-300 hover:scale-105">Log in</Link>
                         {/* <Link 
                             href="/register" 

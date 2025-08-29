@@ -3,13 +3,12 @@
 import { Activity, Star, Clock, Filter } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
 import Navbar from "@/components/doc-navbar";
 import { motion } from "framer-motion";
 import { useState } from "react";
-import Appointment from "../doc-appointment/page";
-import Sidebar from "../Sidebar";
-import { Footer } from "../Footer";
+import Appointment from "../../doc-appointment/page";
+import Sidebar from "../../Sidebar";
+import { Footer } from "../../Footer";
 
 import { ChatDialog } from "@/components/chatbot/ChatDialog";
 import { ChatButton } from "@/components/chatbot/ChatButton";
@@ -20,6 +19,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+
+// ✅ fix scrollbar jump via CSS, not JS
+if (typeof window !== "undefined") {
+  document.documentElement.style.scrollbarGutter = "stable";
+}
 
 // Define Doctor Interface
 interface Doctor {
@@ -62,7 +66,7 @@ export default function DoctorsPage() {
       id: 3,
       name: "Dr. Johnson",
       specialization: "Orthopedic Physiotherapist",
-      category: "Orthopedic Physiotherapist",
+      category: "orthopedic",
       experience: "10+ years",
       rating: 4.7,
       image: "/images/doctor-male.png",
@@ -72,7 +76,7 @@ export default function DoctorsPage() {
       id: 4,
       name: "Dr. Williams",
       specialization: "Neurological Physiotherapist",
-      category: "Neurological Physiotherapist",
+      category: "neurological",
       experience: "10+ years",
       rating: 4.7,
       image: "/images/doctor-male.png",
@@ -85,10 +89,7 @@ export default function DoctorsPage() {
     { value: "general", label: "General Physiotherapy" },
     { value: "orthopedic", label: "Orthopedic" },
     { value: "neurological", label: "Neurological" },
-    {
-      value: "chiropractic",
-      label: "Chiropractic Physiotherapist",
-    },
+    { value: "cardiologist", label: "Cardiologist" },
   ];
 
   const filteredDoctors =
@@ -99,38 +100,39 @@ export default function DoctorsPage() {
   const [chatOpen, setChatOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-background flex flex-col bg-white text-black">
+    <div className="min-h-screen bg-white flex flex-col text-black">
       <Navbar />
       <Sidebar />
+
       <motion.div
-        className="max-w-7xl mx-auto pt-12 flex-grow"
+        className="max-w-7xl mx-auto pt-20 flex-grow px-4"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.5 }}
       >
+        {/* Page Title */}
         <motion.div
           className="text-center mb-12"
           initial={{ y: -20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.6 }}
         >
-          <h1 className="text-4xl font-bold text-foreground mb-4 pt-12">
-            Our Specialist Doctors
-          </h1>
-          <p className="text-muted-foreground max-w-2xl mx-auto">
+          <h1 className="text-4xl font-bold mb-4">Our Specialist Doctors</h1>
+          <p className="text-gray-600 max-w-2xl mx-auto">
             Connect with Sri Lanka&apos;s leading physiotherapists and wellness
-            experts for personalized care and treatment
+            experts for personalized care and treatment.
           </p>
         </motion.div>
 
+        {/* Filter */}
         <motion.div
           className="mb-8 max-w-md mx-auto"
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3, duration: 0.5 }}
         >
-          <div className="flex items-center gap-3 bg-card p-4 rounded-lg shadow-md">
-            <Filter className="h-5 w-5 text-primary" />
+          <div className="flex items-center gap-3 bg-gray-50 border p-4 rounded-lg shadow-sm">
+            <Filter className="h-5 w-5 text-cyan-600 shrink-0" />
             <Select
               value={selectedCategory}
               onValueChange={setSelectedCategory}
@@ -138,9 +140,16 @@ export default function DoctorsPage() {
               <SelectTrigger className="w-full border-none shadow-none focus:ring-0 bg-white">
                 <SelectValue placeholder="Filter by specialization" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent
+                position="popper"
+                className="z-50 bg-white shadow-lg rounded-lg"
+              >
                 {categories.map((category) => (
-                  <SelectItem key={category.value} value={category.value}>
+                  <SelectItem
+                    key={category.value}
+                    value={category.value}
+                    className="text-black" // ✅ make text black
+                  >
                     {category.label}
                   </SelectItem>
                 ))}
@@ -149,6 +158,7 @@ export default function DoctorsPage() {
           </div>
         </motion.div>
 
+        {/* Doctors Grid */}
         <motion.div
           className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
           initial="hidden"
@@ -157,40 +167,43 @@ export default function DoctorsPage() {
           {filteredDoctors.map((doctor) => (
             <motion.div
               key={doctor.id}
-              className="bg-card rounded-lg shadow-lg overflow-hidden"
-              whileHover={{ scale: 1.05 }}
+              className="bg-white rounded-xl shadow-lg overflow-hidden flex flex-col min-h-[450px]"
+              whileHover={{ scale: 1.03 }}
             >
-              <div className="relative h-64">
+              <div className="relative h-64 w-full">
                 <Image
                   src={doctor.image}
                   alt={doctor.name}
-                  height={100}
-                  width={100}
+                  fill
                   className="object-cover"
                 />
               </div>
-              <div className="p-6">
+              <div className="p-6 flex flex-col flex-grow">
                 <h3 className="text-xl font-semibold mb-2">{doctor.name}</h3>
-                <p className="text-muted-foreground mb-4">
-                  {doctor.specialization}
-                </p>
-                <div className="space-y-3">
-                  <div className="flex items-center text-sm">
-                    <Clock className="h-4 w-4 mr-2 text-primary" />
+                <p className="text-gray-500 mb-4">{doctor.specialization}</p>
+
+                <div className="space-y-3 text-sm flex-grow">
+                  <div className="flex items-center">
+                    <Clock className="h-4 w-4 mr-2 text-cyan-600" />
                     <span>{doctor.experience} experience</span>
                   </div>
-                  <div className="flex items-center text-sm">
+                  <div className="flex items-center">
                     <Star className="h-4 w-4 mr-2 text-yellow-500" />
                     <span>{doctor.rating} rating</span>
                   </div>
-                  <div className="flex items-center text-sm">
-                    <Activity className="h-4 w-4 mr-2 text-primary" />
+                  <div className="flex items-center">
+                    <Activity className="h-4 w-4 mr-2 text-cyan-600" />
                     <span>{doctor.expertise.join(", ")}</span>
                   </div>
                 </div>
 
-                <div className="mt-6 flex gap-3">
-
+                <div className="mt-6">
+                  <button
+                    onClick={() => setSelectedDoctor(doctor)}
+                    className="w-full bg-cyan-600 hover:bg-cyan-700 text-white py-2 rounded-lg transition"
+                  >
+                    Book Appointment
+                  </button>
                 </div>
               </div>
             </motion.div>
@@ -204,8 +217,8 @@ export default function DoctorsPage() {
             animate={{ opacity: 1 }}
             transition={{ duration: 0.5 }}
           >
-            <p className="text-lg text-muted-foreground">
-              No doctors found in this category. Please try another category.
+            <p className="text-lg text-gray-500">
+              No doctors found in this category. Please try another one.
             </p>
           </motion.div>
         )}
@@ -221,38 +234,7 @@ export default function DoctorsPage() {
       {/* Chatbot Icon */}
       <ChatButton onClick={() => setChatOpen(true)} />
       <ChatDialog open={chatOpen} onOpenChange={setChatOpen} />
-      <motion.h2
-              className="text-3xl font-bold mb-4 text-black text-center mt-10"
-              initial={{ opacity: 0 }}
-              whileInView={{ opacity: 1 }}
-              transition={{ delay: 0.2 }}
-              viewport={{ once: true }}
-            >
-              Ready to Start Your Recovery Journey?
-            </motion.h2>
-            <motion.p
-              className="mb-8 text-black text-center"
-              initial={{ opacity: 0 }}
-              whileInView={{ opacity: 1 }}
-              transition={{ delay: 0.3 }}
-              viewport={{ once: true }}
-            >
-              Book an appointment with our expert physiotherapists and take the
-              first step towards better health.
-            </motion.p>
-            <motion.div
-              initial={{ opacity: 0 }}
-              whileInView={{ opacity: 1 }}
-              transition={{ delay: 0.4 }}
-              viewport={{ once: true }}
-              whileHover={{ scale: 1.05 }}
-            >
-              <Link href="/doctor-dash">
-              <button className="bg-sky-500 hover:bg-sky-600 text-white px-8 py-6 text-lg rounded-lg font-medium transition-colors flex mx-auto mb-5">
-                Book an appointment
-              </button> 
-              </Link>
-            </motion.div>
+
 
       {/* Footer */}
       <Footer />
