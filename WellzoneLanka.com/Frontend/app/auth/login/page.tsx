@@ -292,7 +292,7 @@ const LoginPage = () => {
                         target="_blank"
                       >
                         <img
-                          src="https://upload.wikimedia.org/wikipedia/commons/a/a5/Instagram_icon.png"
+                          src="https://www.pngfind.com/pngs/m/75-755741_png-instagram-logo-black-outline-transparent-png.png"
                           alt="Instagram"
                           className="h-8 w-8 transition-transform transform hover:scale-110"
                         />

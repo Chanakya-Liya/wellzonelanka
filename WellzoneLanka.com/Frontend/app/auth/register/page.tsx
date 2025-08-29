@@ -420,11 +420,7 @@ export default function Register() {
                           href="https://www.instagram.com/wellzonelanka?igsh=YzF3aW05Znhkdjc2"
                           target="_blank"
                         >
-                          <img
-                            src="https://upload.wikimedia.org/wikipedia/commons/a/a5/Instagram_icon.png"
-                            alt="Instagram"
-                            className="h-8 w-8 transition-transform transform hover:scale-110"
-                          />
+                          
                         </Link>
 
                         {/* YouTube Logo */}
@@ -432,11 +428,7 @@ export default function Register() {
                           href="https://www.youtube.com/@wellzonelanka/community"
                           target="_blank"
                         >
-                          <img
-                            src="https://upload.wikimedia.org/wikipedia/commons/b/b8/YouTube_Logo_2017.svg"
-                            alt="YouTube"
-                            className="h-8 w-auto transition-transform transform hover:scale-110"
-                          />
+                        
                         </Link>
                       </div>
                     </div>
