@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Calendar, Clock, ArrowLeft } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
+import Navbar from '@/components/Navbar';
 
 const timeSlots = [
   "09:00 AM", "09:30 AM", "10:00 AM", "10:30 AM", "11:00 AM", "11:30 AM",
@@ -37,6 +38,8 @@ export default function Appointment({ doctor, onClose }: AppointmentProps) {
   };
 
   return (
+    <>
+    <Navbar />
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
         <div className="p-6 sm:p-8">
@@ -128,5 +131,6 @@ export default function Appointment({ doctor, onClose }: AppointmentProps) {
         </div>
       </div>
     </div>
+    </>
   );
 }

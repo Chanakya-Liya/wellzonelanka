@@ -203,7 +203,7 @@ export default function Home() {
             Join thousands of satisfied patients who have transformed their
             lives with our expert care and support.
           </p>
-          <Link href="/doc-services">
+          <Link href="doctors/doctors-names">
             <Button
               size="lg"
               className="bg-sky-500 hover:bg-sky-600 text-white px-8 py-6 text-lg"

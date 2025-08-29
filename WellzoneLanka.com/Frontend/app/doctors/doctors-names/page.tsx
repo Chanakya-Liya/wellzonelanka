@@ -3,7 +3,7 @@
 import { Activity, Star, Clock, Filter } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import Navbar from "@/components/doc-navbar";
+import Navbar from "@/components/Navbar";
 import { motion } from "framer-motion";
 import { useState } from "react";
 import Appointment from "../../doc-appointment/page";

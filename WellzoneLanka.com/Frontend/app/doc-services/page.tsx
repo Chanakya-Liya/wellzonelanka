@@ -11,7 +11,7 @@ import {
   ArrowRight,
 } from "lucide-react";
 import Link from "next/link";
-import Navbar from "@/components/doc-navbar";
+import Navbar from "@/components/Navbar";
 import { motion } from "framer-motion";
 import { useState } from "react";
 import { ChatDialog } from "@/components/chatbot/ChatDialog";
