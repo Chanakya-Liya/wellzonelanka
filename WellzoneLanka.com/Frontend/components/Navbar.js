@@ -10,13 +10,14 @@ export default function Navbar() {
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 bg-white rounded-[3rem] shadow-lg">
                 <div className="flex justify-between items-center h-16">
                     <div className="flex items-center">
-                        <Image src="/assets/lgo.png" alt="Logo" width={60} height={60} className="hover:scale-105 transition-transform duration-300" />
+                        <Link href="/">
+                            <Image src="/assets/lgo.png" alt="Logo" width={60} height={60} className="hover:scale-105 transition-transform duration-300" />
+                        </Link>
                         <span className="ml-2 text-xl font-bold text-black">WellZone Lanka</span>
                     </div>
                     <div className="hidden md:flex items-center space-x-8">
                         <Link href="/" className="text-gray-700 hover:text-cyan-600 font-medium transition-colors duration-300 hover:scale-105">Home</Link>
                         <Link href="/about/about-2" className="text-gray-700 hover:text-cyan-600 font-medium transition-colors duration-300 hover:scale-105">About us</Link>
-                        
                         {/* Services dropdown */}
                         {/* <div className="relative">
                             <Link 
@@ -28,12 +29,9 @@ export default function Navbar() {
                                 Services
                                
                             </Link>
-                            
-                           
-                            
                         </div> */}
-                        
                         <Link href="/contact" className="text-gray-700 hover:text-cyan-600 font-medium transition-colors duration-300 hover:scale-105">Contact us</Link>
+                        <Link href="/doctors-names" className="text-gray-700 hover:text-cyan-600 font-medium transition-colors duration-300 hover:scale-105">Doctors</Link>
                         <Link href="/auth/login" className="text-gray-700 hover:text-cyan-600 font-medium transition-colors duration-300 hover:scale-105">Log in</Link>
                         {/* <Link 
                             href="/register" 
