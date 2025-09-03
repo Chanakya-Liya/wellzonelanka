@@ -33,7 +33,7 @@ WellzoneLanka.com/
 1. **Create Python Virtual Environment**
    ```powershell
    # Navigate to project root
-   cd C:\Users\Chana\Documents\IIT\WellzoneLanka.com
+   cd [Filepath]\WellzoneLanka.com
    
    # Create virtual environment with Python 3.11 (IMPORTANT!)
    py -3.11 -m venv .venv
@@ -169,7 +169,7 @@ pip install -r Backend/requirements.txt
    ```
    Environment Type: VirtualEnvironment
    Python Version: 3.11.9
-   Path: C:/Users/Chana/Documents/IIT/WellzoneLanka.com/.venv/Scripts/python.exe
+   Path: [Filepath]/WellzoneLanka.com/.venv/Scripts/python.exe
    ```
 
 #### 5. **Successfully Started All APIs**
@@ -279,7 +279,7 @@ This project is part of an academic/educational initiative for health and fitnes
 **Quick Test Commands:**
 ```powershell
 # Test Python environment
-C:/Users/Chana/Documents/IIT/WellzoneLanka.com/.venv/Scripts/python.exe -c "import mediapipe; print('✅ MediaPipe OK')"
+[Filepath]/WellzoneLanka.com/.venv/Scripts/python.exe -c "import mediapipe; print('✅ MediaPipe OK')"
 
 # Test API endpoints
 $apis = @(5000,5001,5002,5003); $apis | ForEach-Object { try { Invoke-WebRequest "http://127.0.0.1:$_/" -TimeoutSec 5 | Select StatusCode } catch { "Port $_ Error" } }
