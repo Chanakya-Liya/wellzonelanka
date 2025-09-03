@@ -1,0 +1,8 @@
+flask>=3.0.0
+flask-cors>=4.0.0
+opencv-python>=4.8.0
+numpy>=1.21.0
+tensorflow>=2.10.0
+mediapipe>=0.10.0
+absl-py>=2.0.0
+protobuf>=3.19.0,<4.0.0
