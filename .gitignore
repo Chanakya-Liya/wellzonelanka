@@ -8,6 +8,7 @@
 # Virtual Environment (CRITICAL - this is 500MB+)
 .venv/
 venv/
+.venv311/
 __pycache__/
 *.pyc
 *.pyo
@@ -17,6 +18,9 @@ __pycache__/
 *.egg-info/
 dist/
 build/
+
+BACKEND/.venv/
+BACKEND/.venv311/
 
 # ====================
 # FRONTEND (Next.js)

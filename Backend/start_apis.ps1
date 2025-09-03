@@ -2,13 +2,15 @@
 Write-Host "Starting WellzoneLanka ML Exercise APIs..." -ForegroundColor Green
 Write-Host "=" * 50
 
-$pythonExe = "C:/Users/Chana/Documents/IIT/WellzoneLanka.com/.venv/Scripts/python.exe"
-$apiPath = "C:/Users/Chana/Documents/IIT/WellzoneLanka.com/Backend/ml/apis"
+# Get the script directory and construct paths relative to it
+$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$pythonExe = Join-Path $scriptDir ".venv311\Scripts\python.exe"
+$apiPath = Join-Path $scriptDir "ml\apis"
 
 # Check if virtual environment python exists
 if (-not (Test-Path $pythonExe)) {
-    Write-Host "Virtual environment not found! Please run: py -3.11 -m venv .venv" -ForegroundColor Red
-    Write-Host "Then install packages: pip install flask flask-cors opencv-python mediapipe tensorflow" -ForegroundColor Red
+    Write-Host "Virtual environment not found! Please run: py -3.11 -m venv .venv311" -ForegroundColor Red
+    Write-Host "Then install packages: pip install -r requirements.txt" -ForegroundColor Red
     exit 1
 }
 
