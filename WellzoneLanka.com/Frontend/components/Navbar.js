@@ -56,40 +56,14 @@ export default function Navbar() {
               Home
             </Link>
 
-            <Link
-              href="/trainer"
-              className="text-gray-700 hover:text-cyan-600 font-medium transition-colors duration-300 hover:scale-105"
-            >
-              Trainers
-            </Link>
-
             {/* Services Dropdown */}
-            <div className="relative" ref={dropdownRef}>
-              <button
-                onClick={handleServicesClick}
-                className="text-gray-700 hover:text-cyan-600 font-medium transition-colors duration-300 group flex items-center"
-              >
-                Services
-              </button>
-
-              {servicesOpen && (
-                <div className="absolute top-full left-0 mt-2 w-56 bg-white rounded-lg shadow-lg border py-2 z-50">
-                  <Link
-                    href="/services"
-                    className="block px-4 py-2 text-gray-700 hover:bg-cyan-50 hover:text-cyan-600 transition-colors"
-                  >
-                    FitnessCare Service
-                  </Link>
-                  <Link
-                    href="/doctors"
-                    className="block px-4 py-2 text-gray-700 hover:bg-cyan-50 hover:text-cyan-600 transition-colors"
-                  >
-                    HealthCare Service
-                  </Link>
-                </div>
-              )}
-            </div>
-
+            <Link
+              href="/services"
+               className="block px-4 py-2 text-gray-700 hover:bg-cyan-50 hover:text-cyan-600 transition-colors"
+            >
+              Services
+            </Link>
+            
             <Link
               href="/about"
               className="text-gray-700 hover:text-cyan-600 font-medium transition-colors duration-300 hover:scale-105"

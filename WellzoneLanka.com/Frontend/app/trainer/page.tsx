@@ -228,7 +228,7 @@ export default function Home() {
               asChild
               variant="outline"
               size="lg"
-              className="trainer-button mb-8 text-white bg-sky-500 rounded-3xl font-bold"
+              className="trainer-button mb-8 text-white bg-sky-500 rounded-3xl font-bold transition-shadow"
             >
               <Link href="/contact">Contact Us</Link>
             </Button>
