@@ -59,7 +59,7 @@ export default function Navbar() {
             {/* Services Dropdown */}
             <Link
               href="/services"
-               className="block px-4 py-2 text-gray-700 hover:bg-cyan-50 hover:text-cyan-600 transition-colors"
+               className="text-gray-700 hover:text-cyan-600 font-medium transition-colors duration-300 hover:scale-105"
             >
               Services
             </Link>
