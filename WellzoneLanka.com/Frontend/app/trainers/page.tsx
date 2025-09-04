@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import Navbar from "@/components/gym-navbar";
+import Navbar from "@/components/Navbar";
 import { Footer } from "@/app/exercise/Footer";
 
 import {
