@@ -30,14 +30,18 @@ export default function Home() {
                 AI-powered platform.
               </p>
               <div className="mt-8 flex flex-wrap gap-4">
-                <Button asChild size="lg" className="... bg-gradient-to-br from-blue-100 via-sky-100 to-green-100 ...">
+                <Button 
+                asChild
+                variant="outline" 
+                size="lg" 
+                className="bg-gradient-to-r from-blue-500 via-sky-400 to-blue-500 rounded-3xl shadow-2xl transition-transform duration-500 hover:scale-105">
                   <Link href="/exercise">Explore Exercises</Link>
                 </Button>
                 <Button
                   asChild
                   variant="outline"
                   size="lg"
-                  className="trainer-button text-white bg-sky-500 rounded-3xl"
+                  className="bg-gradient-to-r from-blue-500 via-sky-400 to-blue-500 rounded-3xl shadow-2xl transition-transform duration-500 hover:scale-105"
                 >
                   <Link href="/trainers">Find a Trainer</Link>
                 </Button>
