@@ -7,7 +7,7 @@ import {
   Bone as Spine,   // ✅ Correct replacement for Spine
   Run,             // ✅ Use Run instead of Running
   Baby,
-  Wheelchair, // ✅ Use Wheelchair directly
+  Accessibility, // 🔄 Use Accessibility instead of Wheelchair
   ArrowRight,
 } from "lucide-react";
 import Link from "next/link";
@@ -68,7 +68,7 @@ export default function ServicesPage() {
       ],
     },
     {
-      icon: <Wheelchair className="h-12 w-12 text-black" />,
+      icon: <Accessibility className="h-12 w-12 text-black" />,
       title: "Geriatric Physiotherapy",
       description:
         "Tailored care for elderly patients focusing on mobility and independence.",
