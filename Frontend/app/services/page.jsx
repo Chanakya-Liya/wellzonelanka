@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import Navbar from "../../components/Navbar";
 import Image from 'next/image';
 import Link from 'next/link';
-import { Footer } from "../Footer";
+import { Footer } from "@/app/Footer";
 import Sidebar from '../Sidebar';
 
 export default function ServicesPage() {

@@ -2,11 +2,16 @@ import React, { useState, useEffect } from "react";
 import { UserPlus, Dumbbell, Stethoscope } from "lucide-react";
 import { useRouter } from "next/navigation";
 
-const RoleSelectionButtons = ({ onChange, initialRole = "user" }) => {
+type RoleSelectionButtonsProps = {
+  onChange?: (role: string) => void;
+  initialRole?: string;
+};
+
+const RoleSelectionButtons = ({ onChange, initialRole = "user" }: RoleSelectionButtonsProps) => {
   const [role, setRole] = useState(initialRole);
   const router = useRouter();
 
-  const handleRoleSelection = (selectedRole) => {
+  const handleRoleSelection = (selectedRole: string) => {
     if (selectedRole === "doctor") {
       router.push("/doctor"); // Redirect to doctor.tsx
       return;

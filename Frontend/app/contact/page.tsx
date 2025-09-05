@@ -9,6 +9,7 @@ import {
   Mail,
   MapPin,
   Send,
+  CheckCircle,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -27,25 +28,54 @@ export default function Contact() {
     agreeToTerms: false,
   });
 
-  const handleChange = (e) => {
-    const { id, value, type, checked } = e.target;
+  const [showPopup, setShowPopup] = useState(false);
+
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    const { id, value, type } = e.target;
+    const checked = type === "checkbox" ? (e.target as HTMLInputElement).checked : undefined;
     setFormData((prevState) => ({
       ...prevState,
       [id]: type === "checkbox" ? checked : value,
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = (e: { preventDefault: () => void }) => {
     e.preventDefault();
     console.log("Form submitted:", formData);
-    // Add your form submission logic here
+
+    // Show popup
+    setShowPopup(true);
+    setTimeout(() => setShowPopup(false), 3000); // auto hide after 3s
+
+    // Reset form
+    setFormData({
+      firstName: "",
+      lastName: "",
+      email: "",
+      phone: "",
+      subject: "",
+      message: "",
+      agreeToTerms: false,
+    });
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 relative">
       {/* Navigation */}
       <Navbar />
       <Sidebar />
+
+      {/* Popup Notification */}
+      {showPopup && (
+        <div className="fixed top-5 right-5 z-50 animate-slide-in">
+          <div className="flex items-center space-x-3 bg-blue-500 text-white px-6 py-4 rounded-xl shadow-lg">
+            <CheckCircle className="h-6 w-6" />
+            <p className="font-medium">✅ Your message has been submitted!</p>
+          </div>
+        </div>
+      )}
 
       {/* Hero Section */}
       <div className="pt-20 bg-gradient-to-b from-cyan-50 to-white">
@@ -389,6 +419,23 @@ export default function Contact() {
       </div>
 
       <Footer />
+
+      {/* Animation Styles */}
+      <style jsx>{`
+        @keyframes slide-in {
+          0% {
+            transform: translateX(120%);
+            opacity: 0;
+          }
+          100% {
+            transform: translateX(0);
+            opacity: 1;
+          }
+        }
+        .animate-slide-in {
+          animation: slide-in 0.4s ease-out;
+        }
+      `}</style>
     </div>
   );
 }

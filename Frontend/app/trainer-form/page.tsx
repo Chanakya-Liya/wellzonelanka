@@ -18,7 +18,18 @@ import { useRouter } from "next/navigation";
 export default function TrainerRegister() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<{
+    firstName: string;
+    lastName: string;
+    email: string;
+    password: string;
+    confirmPassword: string;
+    specialization: string[];
+    certifications: string;
+    experience: string;
+    gymAffiliation: string;
+    bio: string;
+  }>({
     firstName: "",
     lastName: "",
     email: "",
@@ -31,7 +42,7 @@ export default function TrainerRegister() {
     bio: "",
   });
   const [pending, setPending] = useState(false);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
@@ -52,7 +63,7 @@ export default function TrainerRegister() {
   ];
 
   // Handle specialization checkbox changes
-  const handleSpecializationChange = (value) => {
+  const handleSpecializationChange = (value: string) => {
     if (form.specialization.includes(value)) {
       setForm({
         ...form,
