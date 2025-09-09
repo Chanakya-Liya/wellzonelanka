@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Eye, EyeOff, TriangleAlert } from "lucide-react";
 import Navbar from "@/components/Navbar"; // Import Navbar component
+import styles from './register.module.css';
 
 export default function Register() {
   const [showPassword, setShowPassword] = useState(false);
@@ -24,9 +25,9 @@ export default function Register() {
 
   // Array of fitness-related images for the slideshow
   const images = [
-    "/api/placeholder/600/400",
-    "/api/placeholder/600/400",
-    "/api/placeholder/600/400",
+    "../assets/login1.png",
+    "../assets/login2.png",
+    "../assets/login3.png",
   ];
 
   // Set up the slideshow effect
@@ -128,7 +129,7 @@ export default function Register() {
 
           {/* Right Side - Professional Sign Up Form (5 columns) */}
           <div className="lg:col-span-5">
-            <form className="max-w-lg mx-auto bg-white p-10 rounded-lg border border-gray-200 shadow-lg max-h-[680px] overflow-y-auto" onSubmit={handleSubmit}>
+            <form className={`max-w-lg mx-auto bg-white p-10 rounded-lg border border-gray-200 shadow-lg max-h-[680px] overflow-y-auto ${styles.hideScrollbar}`} onSubmit={handleSubmit}>
               <div className="space-y-6">
                 {/* Header */}
                 <div>
