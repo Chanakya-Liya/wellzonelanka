@@ -80,52 +80,7 @@ export default function Register() {
       {/* Main Content */}
       <div className="relative z-10 max-w-7xl mx-auto pt-6">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start p-6" style={{ paddingTop: "60px" }}>
-          {/* Left Side - Image Slideshow (7 columns) */}
-          <div className="lg:col-span-7 rounded-lg overflow-hidden shadow-xl relative bg-gray-300 flex items-center justify-center" style={{ height: "680px" }}>
-            <div className="relative w-full h-full">
-              {images.map((src, index) => (
-                <div
-                  key={index}
-                  className="absolute inset-0 transition-opacity duration-1000 ease-in-out flex items-center justify-center"
-                  style={{
-                    opacity: currentImageIndex === index ? 1 : 0,
-                    zIndex: currentImageIndex === index ? 10 : 0,
-                  }}
-                >
-                  {/* Replace with actual image if available */}
-                  <img
-                    src={src}
-                    alt={`Fitness ${index + 1}`}
-                    className="object-cover w-full h-full"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
-                </div>
-              ))}
-
-              <div className="absolute bottom-0 left-0 right-0 p-8 z-20">
-                <h2 className="text-white text-4xl font-bold mb-3">
-                  Elevate Your Fitness
-                </h2>
-                <p className="text-white/90 text-xl mb-4">
-                  Professional training programs tailored to your goals
-                </p>
-
-                {/* Slideshow indicators */}
-                <div className="flex items-center space-x-2 mt-6">
-                  {images.map((_, index) => (
-                    <div
-                      key={index}
-                      className={`h-2 rounded-full transition-all duration-300 ${
-                        currentImageIndex === index
-                          ? "w-10 bg-cyan-500"
-                          : "w-3 bg-white/70"
-                      }`}
-                    />
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
+          
 
           {/* Right Side - Professional Sign Up Form (5 columns) */}
           <div className="lg:col-span-5">
@@ -534,6 +489,53 @@ export default function Register() {
                 </div>
               </div>
             </form>
+          </div>
+
+          {/* Left Side - Image Slideshow (7 columns) */}
+          <div className="lg:col-span-7 rounded-lg overflow-hidden shadow-xl relative bg-gray-300 flex items-center justify-center" style={{ height: "680px" }}>
+            <div className="relative w-full h-full">
+              {images.map((src, index) => (
+                <div
+                  key={index}
+                  className="absolute inset-0 transition-opacity duration-1000 ease-in-out flex items-center justify-center"
+                  style={{
+                    opacity: currentImageIndex === index ? 1 : 0,
+                    zIndex: currentImageIndex === index ? 10 : 0,
+                  }}
+                >
+                  {/* Replace with actual image if available */}
+                  <img
+                    src={src}
+                    alt={`Fitness ${index + 1}`}
+                    className="object-cover w-full h-full"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+                </div>
+              ))}
+
+              <div className="absolute bottom-0 left-0 right-0 p-8 z-20">
+                <h2 className="text-white text-4xl font-bold mb-3">
+                  Elevate Your Fitness
+                </h2>
+                <p className="text-white/90 text-xl mb-4">
+                  Professional training programs tailored to your goals
+                </p>
+
+                {/* Slideshow indicators */}
+                <div className="flex items-center space-x-2 mt-6">
+                  {images.map((_, index) => (
+                    <div
+                      key={index}
+                      className={`h-2 rounded-full transition-all duration-300 ${
+                        currentImageIndex === index
+                          ? "w-10 bg-cyan-500"
+                          : "w-3 bg-white/70"
+                      }`}
+                    />
+                  ))}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
