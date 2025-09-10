@@ -1,61 +1,51 @@
-import { NextResponse } from "next/server";
-import User from "../../../../models/user";
-import connectToDatabase from "../../../../lib/db";
-import bcrypt from "bcryptjs";
+import { NextRequest, NextResponse } from "next/server";
+import { auth as firebaseAuth } from "@/lib/firebase";
+import { dbService } from "@/lib/database";
+import { User } from "firebase/auth";
+import { updatePassword as firebaseUpdatePassword } from "firebase/auth";
 
-export const POST = async (request: any) => {
+export async function POST(request: NextRequest) {
   try {
     const { token, password } = await request.json();
 
     if (!token || !password) {
-      console.log("Token or password missing");
-      return new NextResponse(
-        JSON.stringify({ message: "Token and new password are required" }),
-        { status: 400, headers: { "Content-Type": "application/json" } }
+      return NextResponse.json(
+        { message: "Token and password are required" },
+        { status: 400 }
       );
     }
 
-    console.log("Received token:", token);
-    console.log("Received password:", password);
-
-    await connectToDatabase();
-
-    // Find the user with the provided token and ensure the token is not expired
-    const user = await User.findOne({
-      resetToken: token,
-      resetTokenExpiry: { $gt: Date.now() }, // Ensure the token has not expired
-    });
-
-    console.log("User found:", user);
-
-    if (!user) {
-      return new NextResponse(
-        JSON.stringify({ message: "Invalid or expired token" }),
-        { status: 400, headers: { "Content-Type": "application/json" } }
+    // Verify token
+    const verification = await dbService.verifyPasswordResetToken(token);
+    if (!verification.valid) {
+      return NextResponse.json(
+        { message: "Invalid or expired token" },
+        { status: 400 }
       );
     }
 
-    // Hash the new password before saving
-    user.password = await bcrypt.hash(password, 10);
+    // Update the password in Firebase Auth
+    await updatePassword(firebaseAuth.currentUser, password);
 
-    // Clear the reset token and expiry after successful password reset
-    user.resetToken = undefined;
-    user.resetTokenExpiry = undefined;
+    // Mark token as used
+    await dbService.markTokenAsUsed(token);
 
-    await user.save();
-
-    console.log("Password reset successful for user:", user.email);
-
-    return new NextResponse(
-      JSON.stringify({ message: "Password reset successful" }),
-      { status: 200, headers: { "Content-Type": "application/json" } }
+    return NextResponse.json(
+      { message: "Password reset successful" },
+      { status: 200 }
     );
   } catch (error) {
-    console.error("Error resetting password:", error);
-
-    return new NextResponse(
-      JSON.stringify({ message: "Server error", error: error.message }),
-      { status: 500, headers: { "Content-Type": "application/json" } }
+    console.error("Password reset error:", error);
+    return NextResponse.json(
+      { message: "Password reset failed" },
+      { status: 500 }
     );
   }
-};
+}
+
+async function updatePassword(currentUser: User | null, password: string) {
+  if (!currentUser) {
+    throw new Error("No authenticated user found.");
+  }
+  await firebaseUpdatePassword(currentUser, password);
+}

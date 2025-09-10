@@ -1,0 +1,22 @@
+[
+  {
+    "id": "user_1757489752075_5jm3mvtsh",
+    "firstName": "Thevinu",
+    "lastName": "Bandara",
+    "email": "thevinu2005@gmail.com",
+    "passwordHash": "$2b$12$N.7g0qAtxcGf2/TKqOp0Wu4nx.Az6nzQI5NbsqOZJngqHoNY2ZcIm",
+    "role": "user",
+    "createdAt": "2025-09-10T07:35:52.075Z",
+    "isApproved": true
+  },
+  {
+    "id": "user_1757490986272_71a2moj93",
+    "firstName": "Bihandu",
+    "lastName": "Methsilu",
+    "email": "bihandumethsilu55@gmail.com",
+    "passwordHash": "$2b$12$oflaQBGFqxVma8O9XoXhS.Z9C2yX8oq7RwmC4y7zuvYv3CULiCmFK",
+    "role": "user",
+    "createdAt": "2025-09-10T07:56:26.272Z",
+    "isApproved": true
+  }
+]
