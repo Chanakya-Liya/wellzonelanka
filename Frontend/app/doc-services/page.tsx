@@ -5,7 +5,7 @@ import {
   Brain,
   Dumbbell,
   Bone as Spine,   // ✅ Correct replacement for Spine
-  Run,             // ✅ Use Run instead of Running
+  ActivitySquare as Run, // Using ActivitySquare for sports activities
   Baby,
   Accessibility, // 🔄 Use Accessibility instead of Wheelchair
   ArrowRight,
@@ -132,7 +132,7 @@ export default function ServicesPage() {
     visible: {
       scale: 1,
       transition: {
-        type: "spring" as any,
+        type: "spring" as const,
         stiffness: 260,
         damping: 20,
       },
@@ -169,7 +169,7 @@ export default function ServicesPage() {
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
-            className="text-4xl md:text-5xl font-bold mb-6 pt-11 text-black"
+            className="text-4xl md:text-5xl font-bold mb-6 text-black"
           >
             Our Services
           </motion.h1>
