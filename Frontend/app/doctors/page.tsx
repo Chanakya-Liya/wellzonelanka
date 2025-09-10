@@ -12,7 +12,7 @@ import {
   Play,
 } from "lucide-react";
 import { motion } from "framer-motion";
-import Navbar from "@/components/doc-navbar";
+import Navbar from "@/components/Navbar";
 import { Marquee } from "@/components/magicui/marquee";
 import { useState } from "react";
 import { ChatDialog } from "@/components/chatbot/ChatDialog";
@@ -203,7 +203,7 @@ export default function Home() {
             Join thousands of satisfied patients who have transformed their
             lives with our expert care and support.
           </p>
-          <Link href="/doc-services">
+          <Link href="doctors/doctors-names">
             <Button
               size="lg"
               className="bg-sky-500 hover:bg-sky-600 text-white px-8 py-6 text-lg"

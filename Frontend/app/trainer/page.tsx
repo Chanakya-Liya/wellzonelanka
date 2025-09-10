@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Dumbbell, Users, Camera, ArrowRight } from "lucide-react";
-import Navbar from "@/components/gym-navbar";
+import Navbar from "@/components/Navbar";
 import { Footer } from "./Footer";
 import Sidebar from "../Sidebar";
 
@@ -30,14 +30,18 @@ export default function Home() {
                 AI-powered platform.
               </p>
               <div className="mt-8 flex flex-wrap gap-4">
-                <Button asChild size="lg" className="exercise-button">
+                <Button 
+                asChild
+                variant="outline" 
+                size="lg" 
+                className="bg-gradient-to-r from-blue-500 via-sky-400 to-blue-500 rounded-3xl shadow-2xl transition-transform duration-500 hover:scale-105">
                   <Link href="/exercise">Explore Exercises</Link>
                 </Button>
                 <Button
                   asChild
                   variant="outline"
                   size="lg"
-                  className="trainer-button text-white bg-sky-500 rounded-3xl"
+                  className="bg-gradient-to-r from-blue-500 via-sky-400 to-blue-500 rounded-3xl shadow-2xl transition-transform duration-500 hover:scale-105"
                 >
                   <Link href="/trainers">Find a Trainer</Link>
                 </Button>
@@ -47,7 +51,7 @@ export default function Home() {
               <img
                 src="https://well-zone-assets.netlify.app/Situp%20Girl.jpeg"
                 alt="Person exercising at home"
-                className="rounded-lg shadow-xl"
+                className="rounded-3xl shadow-2xl transition-transform duration-500 hover:scale-105"
               />
             </div>
           </div>
@@ -65,9 +69,9 @@ export default function Home() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          <Card className="wellzone-card">
-            <CardContent className="pt-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 ">
+          <Card className="wellzone-card transition-transform duration-500 hover:scale-105">
+            <CardContent className="pt-6 ">
               <div className="flex flex-col items-center text-center">
                 <div className="p-3 rounded-full bg-secondary/10 mb-4">
                   <Dumbbell
@@ -89,7 +93,7 @@ export default function Home() {
             </CardContent>
           </Card>
 
-          <Card className="wellzone-card">
+          <Card className="wellzone-card transition-transform duration-500 hover:scale-105">
             <CardContent className="pt-6">
               <div className="flex flex-col items-center text-center">
                 <div className="p-3 rounded-full bg-accent/10 mb-4">
@@ -112,7 +116,7 @@ export default function Home() {
             </CardContent>
           </Card>
 
-          <Card className="wellzone-card">
+          <Card className="wellzone-card transition-transform duration-500 hover:scale-105">
             <CardContent className="pt-6">
               <div className="flex flex-col items-center text-center">
                 <div className="p-3 rounded-full bg-secondary/10 mb-4">
@@ -151,7 +155,7 @@ export default function Home() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 ">
           {[
             {
               name: "Priya Mendis",
@@ -224,7 +228,7 @@ export default function Home() {
               asChild
               variant="outline"
               size="lg"
-              className="trainer-button mb-8 text-white bg-sky-500 rounded-3xl font-bold"
+              className="trainer-button mb-8 text-white bg-sky-500 rounded-3xl font-bold transition-shadow"
             >
               <Link href="/contact">Contact Us</Link>
             </Button>

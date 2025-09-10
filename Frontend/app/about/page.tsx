@@ -11,7 +11,7 @@ import {
   Zap,
   Award,
 } from "lucide-react";
-import Navbar from "@/components/doc-navbar";
+import Navbar from "@/components/Navbar";
 import { Footer } from "@/app/Footer";
 import Sidebar from "@/app/Sidebar";
 import Image from "next/image";

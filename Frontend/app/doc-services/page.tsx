@@ -4,14 +4,14 @@ import {
   Activity,
   Brain,
   Dumbbell,
-  Spline as Spine,
-  FileWarning as Running,
+  Bone as Spine,   // ✅ Correct replacement for Spine
+  ActivitySquare as Run, // Using ActivitySquare for sports activities
   Baby,
-  Armchair as Wheelchair,
+  Accessibility, // 🔄 Use Accessibility instead of Wheelchair
   ArrowRight,
 } from "lucide-react";
 import Link from "next/link";
-import Navbar from "@/components/doc-navbar";
+import Navbar from "@/components/Navbar";
 import { motion } from "framer-motion";
 import { useState } from "react";
 import { ChatDialog } from "@/components/chatbot/ChatDialog";
@@ -46,7 +46,7 @@ export default function ServicesPage() {
       ],
     },
     {
-      icon: <Running className="h-12 w-12 text-black" />,
+      icon: <Run className="h-12 w-12 text-black" />,
       title: "Sports Physiotherapy",
       description: "Comprehensive care for athletes and sports enthusiasts.",
       features: [
@@ -68,7 +68,7 @@ export default function ServicesPage() {
       ],
     },
     {
-      icon: <Wheelchair className="h-12 w-12 text-black" />,
+      icon: <Accessibility className="h-12 w-12 text-black" />,
       title: "Geriatric Physiotherapy",
       description:
         "Tailored care for elderly patients focusing on mobility and independence.",
@@ -110,7 +110,7 @@ export default function ServicesPage() {
       opacity: 1,
       y: 0,
       transition: {
-        type: "spring",
+        type: "spring" as const,
         stiffness: 100,
         damping: 12,
       },
@@ -120,7 +120,7 @@ export default function ServicesPage() {
       boxShadow:
         "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
       transition: {
-        type: "spring",
+        type: "spring" as const,
         stiffness: 400,
         damping: 10,
       },
@@ -132,7 +132,7 @@ export default function ServicesPage() {
     visible: {
       scale: 1,
       transition: {
-        type: "spring",
+        type: "spring" as const,
         stiffness: 260,
         damping: 20,
       },
@@ -156,6 +156,7 @@ export default function ServicesPage() {
     <div className="min-h-screen bg-white">
       <Navbar />
       <Sidebar />
+
       {/* Hero Section */}
       <motion.section
         initial={{ opacity: 0, y: -20 }}
@@ -168,7 +169,7 @@ export default function ServicesPage() {
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
-            className="text-4xl md:text-5xl font-bold mb-6 pt-11 text-black"
+            className="text-4xl md:text-5xl font-bold mb-6 text-black"
           >
             Our Services
           </motion.h1>
@@ -347,6 +348,7 @@ export default function ServicesPage() {
           </motion.div>
         </div>
       </section>
+
       {/* CTA Section */}
       <motion.section
         className="py-16 px-4 bg-white"
@@ -375,6 +377,17 @@ export default function ServicesPage() {
               },
             }}
           >
+            <h3 className="text-2xl font-semibold">Start Your Recovery Today</h3>
+            <p className="mt-2">
+              Book your appointment with our expert physiotherapists and begin
+              your journey towards better health.
+            </p>
+            <Link
+              href="/doctors-names"
+              className="mt-4 inline-block bg-white text-primary font-semibold px-6 py-3 rounded-lg shadow hover:bg-gray-100 transition"
+            >
+              Book Now
+            </Link>
           </motion.div>
         </div>
       </motion.section>

@@ -110,7 +110,7 @@ export default function Home() {
               className="flex space-x-4 animate-fade-in opacity-0"
               style={{ animationDelay: "0.8s" }}
             >
-              <Link href="/register">
+              <Link href="/auth/register">
                 <button className="rounded-full bg-cyan-500 text-white px-8 py-4 text-lg font-semibold hover:bg-cyan-600 transition-colors">
                   Get Started
                 </button>
