@@ -1,57 +1,124 @@
-import bcrypt from 'bcryptjs';
-import { NextResponse } from 'next/server';
-import User from '../../../../models/user';
-import connectToDatabase from '../../../../lib/db';
+import { NextRequest, NextResponse } from 'next/server';
+import { createUserWithEmailAndPassword, AuthError } from 'firebase/auth';
+import { auth as firebaseAuth } from '@/lib/firebase-dev'; // Using dev config
+import { dbService } from '@/lib/database-mock'; // Using mock service temporarily
 
-export async function POST(request: Request) {
-  const { firstName, lastName, email, password, confirmPassword } = await request.json();
+interface UserData {
+  firstName: string;
+  lastName: string;
+  email: string;
+  role: 'user' | 'trainer' | 'doctor';
+  licenseNumber?: string;
+  experience?: number;
+  specialization?: string;
+}
 
-  console.log("Received data:", { firstName, lastName, email, password, confirmPassword });
+interface SignupResponse {
+  message: string;
+  userId?: string;
+  requiresApproval?: boolean;
+}
 
-  const isValidEmail = (email: string) => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
-  };
-
-  if (!firstName || !lastName || !email || !password || !confirmPassword) {
-    return NextResponse.json({ message: "All fields are required" }, { status: 400 });
-  }
-
-  if (!isValidEmail(email)) {
-    return NextResponse.json({ message: "Invalid email format" }, { status: 400 });
-  }
-
-  if (confirmPassword !== password) {
-    return NextResponse.json({ message: "Passwords do not match. Please check and try again. 🔒" }, { status: 400 });
-  }
-
-  if (password.length < 8) {
-    return NextResponse.json({ message: "Password must be at least 8 characters" }, { status: 400 });
-  }
-
+export async function POST(request: NextRequest) {
   try {
-    await connectToDatabase();
-    console.log("Connected to MongoDB");
+    const body = await request.json();
+    const { 
+      firstName, 
+      lastName, 
+      email, 
+      password, 
+      role, 
+      licenseNumber, 
+      experience, 
+      specialization 
+    } = body;
 
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      return NextResponse.json({ message: "Email already in use. Please log in or use a different email. 📧" }, { status: 400 });
+    // Validate required fields
+    if (!firstName || !lastName || !email || !password || !role) {
+      return NextResponse.json(
+        { message: 'Missing required fields' },
+        { status: 400 }
+      );
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const newUser = new User({
-      email,
+    // Check if user already exists
+    const existingUser = await dbService.emailExists(email);
+    if (existingUser) {
+      return NextResponse.json(
+        { message: 'User with this email already exists' },
+        { status: 400 }
+      );
+    }
+
+    // Create user in Firebase Auth
+    const userCredential = await createUserWithEmailAndPassword(firebaseAuth, email, password);
+    const firebaseUser = userCredential.user;
+
+    // Prepare user data based on role
+    let userData: UserData = {
       firstName,
       lastName,
-      password: hashedPassword,
-    });
+      email,
+      role,
+    };
 
-    await newUser.save();
-    console.log("User created:", newUser);
+    // Add professional-specific fields
+    if (role === 'trainer' || role === 'doctor') {
+      if (!licenseNumber || !experience || !specialization) {
+        return NextResponse.json(
+          { message: 'Professional fields are required for trainers and doctors' },
+          { status: 400 }
+        );
+      }
+      
+      userData = {
+        ...userData,
+        licenseNumber,
+        experience: parseInt(experience),
+        specialization,
+      };
+    }
 
-    return NextResponse.json({ message: "Welcome to WellZone Lanka! Your account has been created successfully. 🎉" }, { status: 201 });
-  } catch (error) {
-    console.error("Error in signup route:", error);
-    return NextResponse.json({ message: "Oops! Something went wrong. Please try again. 🛠️" }, { status: 500 });
+    // Create user profile in Firestore
+    await dbService.createUserProfile(firebaseUser.uid, userData);
+
+    const response: SignupResponse = {
+      message: 'User registered successfully',
+      userId: firebaseUser.uid,
+      requiresApproval: role !== 'user'
+    };
+
+    return NextResponse.json(response, { status: 201 });
+
+  } catch (error: any) {
+    console.error('Registration error:', error);
+    
+    if (error?.code) {
+      if (error.code === 'auth/email-already-in-use') {
+        return NextResponse.json(
+          { message: 'Email is already in use' },
+          { status: 400 }
+        );
+      }
+      
+      if (error.code === 'auth/weak-password') {
+        return NextResponse.json(
+          { message: 'Password should be at least 6 characters' },
+          { status: 400 }
+        );
+      }
+      
+      if (error.code === 'auth/invalid-email') {
+        return NextResponse.json(
+          { message: 'Invalid email address' },
+          { status: 400 }
+        );
+      }
+    }
+
+    return NextResponse.json(
+      { message: 'Registration failed' },
+      { status: 500 }
+    );
   }
 }

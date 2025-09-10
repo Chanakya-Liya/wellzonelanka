@@ -1,140 +1,134 @@
-import NextAuth, { NextAuthOptions } from "next-auth";
-import CredentialsProvider from "next-auth/providers/credentials";
-import GoogleProvider from "next-auth/providers/google";
-import bcrypt from "bcryptjs";
-import dotenv from "dotenv";
-import User from "../../../../models/user";
-import connectToDatabase from "../../../../lib/db";
-import { prisma } from "../../../../lib/prisma";
-
-dotenv.config();
-
-const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID!;
-const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET!;
-const MONGO_URI = process.env.MONGO;
-
-if (!MONGO_URI) {
-  throw new Error("Please define the MONGO environment variable");
-}
-
-// Module augmentation for custom JWT and session fields
-declare module "next-auth/jwt" {
-  interface JWT {
-    id?: string;
-  }
-}
+// app/api/auth/[...nextauth]/route.ts
+import NextAuth from 'next-auth';
+import CredentialsProvider from 'next-auth/providers/credentials';
+import GoogleProvider from 'next-auth/providers/google';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
+import { dbService } from '@/lib/database';
 
 declare module "next-auth" {
   interface Session {
     user: {
+      name?: string | null;
+      email?: string | null;
+      image?: string | null;
       id?: string;
-      email?: string;
-      name?: string;
+      role?: string;
+      isVerified?: boolean;
+      profileComplete?: boolean;
     };
+  }
+  interface User {
+    id?: string;
+    name?: string | null;
+    email?: string | null;
+    image?: string | null;
+    role?: string;
+    isVerified?: boolean;
+    profileComplete?: boolean;
   }
 }
 
-export const authOptions: NextAuthOptions = {
-  session: {
-    strategy: "jwt",
-  },
+const handler = NextAuth({
   providers: [
     CredentialsProvider({
-      name: "credentials",
+      name: 'credentials',
       credentials: {
-        email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" },
+        email: { label: 'Email', type: 'email' },
+        password: { label: 'Password', type: 'password' }
       },
       async authorize(credentials) {
+        if (!credentials?.email || !credentials?.password) {
+          return null;
+        }
+
         try {
-          if (!credentials?.email || !credentials.password) {
-            throw new Error("Missing credentials");
-          }
-
-          await connectToDatabase();
-
-          const user = await User.findOne({ email: credentials.email }).exec() as { _id: string; email: string; password: string; firstName: string; lastName: string };
-
-          if (!user || !user.password) {
-            throw new Error("User not found or missing password");
-          }
-
-          const isValidPassword = await bcrypt.compare(
-            credentials.password,
-            user.password
+          // Sign in with Firebase Auth
+          const userCredential = await signInWithEmailAndPassword(
+            auth,
+            credentials.email,
+            credentials.password
           );
+          
+          const firebaseUser = userCredential.user;
 
-          if (!isValidPassword) {
-            throw new Error("Invalid password");
+          // Get user profile from Firestore
+          const userProfile = await dbService.getUserProfile(firebaseUser.uid);
+          
+          if (!userProfile) {
+            return null;
           }
 
           return {
-            id: user._id.toString(),
-            email: user.email,
-            name: `${user.firstName} ${user.lastName}`,
+            id: firebaseUser.uid,
+            email: firebaseUser.email,
+            name: `${userProfile.firstName} ${userProfile.lastName}`,
+            role: userProfile.role,
+            isVerified: userProfile.isVerified,
+            profileComplete: userProfile.profileComplete,
           };
         } catch (error) {
-          console.error("Authorization error:", error);
+          console.error('Authentication error:', error);
           return null;
         }
-      },
+      }
     }),
-
     GoogleProvider({
-      clientId: GOOGLE_CLIENT_ID,
-      clientSecret: GOOGLE_CLIENT_SECRET,
+      clientId: process.env.GOOGLE_CLIENT_ID!,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
     }),
   ],
   callbacks: {
+    async signIn({ user, account, profile }) {
+      if (account?.provider === 'google') {
+        try {
+          // Check if user already exists in our database
+          const existingUser = await dbService.getUserByEmail(user.email!);
+          
+          if (!existingUser) {
+            // Create new user profile for Google sign-in users
+            await dbService.createUserProfile(user.id!, {
+              firstName: (profile as any)?.givenName || user.name?.split(' ')[0] || '',
+              lastName: (profile as any)?.familyName || user.name?.split(' ')[1] || '',
+              email: user.email!,
+              role: 'user',
+            });
+          }
+          
+          return true;
+        } catch (error) {
+          console.error('Error handling Google sign-in:', error);
+          return false;
+        }
+      }
+      
+      return true;
+    },
     async jwt({ token, user }) {
       if (user) {
-        token.id = user.id;
-        token.email = user.email ?? undefined;
-        token.name = user.name ?? undefined;
+        token.role = user.role;
+        token.isVerified = user.isVerified;
+        token.profileComplete = user.profileComplete;
       }
       return token;
     },
     async session({ session, token }) {
-      session.user = {
-        id: token.id,
-        email: token.email ?? undefined,
-        name: token.name ?? undefined,
-      };
+      if (token && session.user) {
+        session.user.id = token.sub!;
+        session.user.role = token.role as string;
+        session.user.isVerified = token.isVerified as boolean;
+        session.user.profileComplete = token.profileComplete as boolean;
+      }
       return session;
-    },
-    async signIn({ profile }) {
-      console.log("Profile:", profile);
-      if (!profile || !profile.email) {
-        throw new Error("Email not found in profile");
-      }
-      
-
-      const existingUser = await User.findOne({ email: profile.email }).exec();
-
-      if (existingUser) {
-        // User already exists, link Google login with existing user
-        return true;
-      } else {
-        // User does not exist, create a new user
-        await prisma.user.upsert({
-          where: { email: profile.email },
-          update: { name: profile.name ?? "" },
-          create: {
-            email: profile.email,
-            name: profile.name ?? "",
-          },
-        });
-        console.log("New user created:", profile.email);
-      }
-
-      return true;
     },
   },
   pages: {
-    signIn: "/services",
+    signIn: '/auth/login',
+  },
+  session: {
+    strategy: 'jwt',
   },
   secret: process.env.NEXTAUTH_SECRET,
-};
+});
 
-const handler = NextAuth(authOptions);
 export { handler as GET, handler as POST };
