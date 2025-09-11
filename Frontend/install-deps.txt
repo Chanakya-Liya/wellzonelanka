@@ -1,0 +1,3 @@
+# Install bcryptjs for password hashing
+npm install bcryptjs
+npm install @types/bcryptjs --save-dev

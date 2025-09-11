@@ -1,11 +1,15 @@
+// Updated register page with database integration
 "use client";
 
 import { useState, useEffect } from "react";
-import { Eye, EyeOff, TriangleAlert } from "lucide-react";
-import Navbar from "@/components/Navbar"; // Import Navbar component
+import { Eye, EyeOff, TriangleAlert, CheckCircle } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import Navbar from "@/components/Navbar";
 import styles from './register.module.css';
 
 export default function Register() {
+  const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [form, setForm] = useState({
@@ -15,12 +19,28 @@ export default function Register() {
     password: "",
     confirmPassword: "",
     role: "user",
+    // Professional fields
     licenseNumber: "",
     experience: "",
     specialization: "",
+    // Trainer specific fields
+    gymAffiliation: "",
+    certifications: "",
+    bio: "",
+    trainingPhilosophy: "",
+    // Doctor specific fields
+    hospitalAffiliation: "",
+    medicalLicense: "",
+    professionalBio: "",
+    // File uploads (we'll handle as text for now, can be enhanced later)
+    certificationFiles: "",
+    // Agreement fields
+    termsAgreed: false,
+    authenticityConfirmed: false,
   });
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   // Array of fitness-related images for the slideshow
@@ -42,28 +62,95 @@ export default function Register() {
     setForm({
       ...form,
       role,
+      // Reset professional fields when changing roles
       licenseNumber: "",
       experience: "",
       specialization: "",
+      gymAffiliation: "",
+      certifications: "",
+      bio: "",
+      trainingPhilosophy: "",
+      hospitalAffiliation: "",
+      medicalLicense: "",
+      professionalBio: "",
+      certificationFiles: "",
     });
   };
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setPending(true);
     setError(null);
+    setSuccess(null);
 
+    // Validation
     if (form.password !== form.confirmPassword) {
       setError("Passwords do not match.");
       setPending(false);
       return;
     }
 
-    // Simulate API call
-    setTimeout(() => {
+    if (form.password.length < 6) {
+      setError("Password must be at least 6 characters long.");
       setPending(false);
-      console.log("Form submitted:", form);
-    }, 1000);
+      return;
+    }
+
+    // Professional validation
+    if (form.role !== 'user') {
+      if (!form.licenseNumber.trim()) {
+        setError("License number is required for professionals.");
+        setPending(false);
+        return;
+      }
+      if (!form.experience.trim() || parseInt(form.experience) < 0) {
+        setError("Valid years of experience is required.");
+        setPending(false);
+        return;
+      }
+      if (!form.specialization.trim()) {
+        setError("Specialization is required for professionals.");
+        setPending(false);
+        return;
+      }
+    }
+
+    try {
+      const response = await fetch('/api/auth/signup-firebase', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(form),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.message || 'Registration failed');
+        return;
+      }
+
+      // Success
+      if (data.requiresApproval) {
+        setSuccess("Registration successful! Your account is pending approval. You'll be notified once approved.");
+        toast.success("Registration successful! Pending approval.");
+      } else {
+        setSuccess("Registration successful! You can now log in.");
+        toast.success("Registration successful!");
+      }
+
+      // Redirect after short delay
+      setTimeout(() => {
+        router.push('/auth/login');
+      }, 2000);
+
+    } catch (error) {
+      console.error('Registration error:', error);
+      setError('An unexpected error occurred. Please try again.');
+    } finally {
+      setPending(false);
+    }
   };
 
   return (
@@ -80,7 +167,6 @@ export default function Register() {
       {/* Main Content */}
       <div className="relative z-10 max-w-7xl mx-auto pt-6">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start p-6" style={{ paddingTop: "60px" }}>
-          
 
           {/* Right Side - Professional Sign Up Form (5 columns) */}
           <div className="lg:col-span-5">
@@ -120,6 +206,7 @@ export default function Register() {
                             ? "border-cyan-500 bg-cyan-50"
                             : "border-gray-200 bg-white hover:border-gray-300"
                         }`}
+                        disabled={pending}
                       >
                         <span className="text-xl mb-1">{icon}</span>
                         <span className="text-xs font-medium text-gray-700">{label}</span>
@@ -127,6 +214,14 @@ export default function Register() {
                     ))}
                   </div>
                 </div>
+
+                {/* Success Message */}
+                {success && (
+                  <div className="bg-green-50 border border-green-200 p-3 rounded-lg flex items-center gap-2 text-sm text-green-600">
+                    <CheckCircle className="h-4 w-4" />
+                    <span>{success}</span>
+                  </div>
+                )}
 
                 {/* Error Message */}
                 {error && (
@@ -136,7 +231,7 @@ export default function Register() {
                   </div>
                 )}
 
-                {/* Professional Form Fields */}
+                {/* Form Fields */}
                 <div className="space-y-5">
                   <div className="px-2 sm:px-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -198,7 +293,7 @@ export default function Register() {
                       </div>
                     </div>
 
-                    {/* Show additional fields for trainer and doctor */}
+                    {/* Professional Fields */}
                     {(form.role === 'trainer' || form.role === 'doctor') && (
                       <>
                         <div>
@@ -241,58 +336,250 @@ export default function Register() {
                         </div>
 
                         {form.role === 'trainer' && (
-                          <div>
-                            <label className="text-sm font-medium text-gray-700 mb-1 mt-5 block">
-                              Specialization
-                            </label>
-                            <div className="relative">
-                              <select
-                                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all"
-                                disabled={pending}
-                                value={form.specialization}
-                                onChange={(e) =>
-                                  setForm({ ...form, specialization: e.target.value })
-                                }
-                                required
-                              >
-                                <option value="">Select specialization</option>
-                                <option value="weight-training">Weight Training</option>
-                                <option value="cardio">Cardio</option>
-                                <option value="yoga">Yoga</option>
-                                <option value="pilates">Pilates</option>
-                                <option value="crossfit">CrossFit</option>
-                                <option value="sports-specific">Sports-Specific Training</option>
-                              </select>
+                          <>
+                            <div>
+                              <label className="text-sm font-medium text-gray-700 mb-1 mt-5 block">
+                                Area of Specialization
+                              </label>
+                              <div className="relative">
+                                <select
+                                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all"
+                                  disabled={pending}
+                                  value={form.specialization}
+                                  onChange={(e) =>
+                                    setForm({ ...form, specialization: e.target.value })
+                                  }
+                                  required
+                                >
+                                  <option value="">Select your specialization</option>
+                                  <option value="weight-training">Weight Training</option>
+                                  <option value="cardio-fitness">Cardio Fitness</option>
+                                  <option value="yoga">Yoga</option>
+                                  <option value="nutrition">Nutrition</option>
+                                  <option value="pilates">Pilates</option>
+                                  <option value="crossfit">CrossFit</option>
+                                  <option value="sports-specific">Sports-Specific Training</option>
+                                  <option value="functional-fitness">Functional Fitness</option>
+                                </select>
+                              </div>
                             </div>
-                          </div>
+
+                            <div>
+                              <label className="text-sm font-medium text-gray-700 mb-1 mt-5 block">
+                                Gym Affiliation
+                              </label>
+                              <div className="relative">
+                                <input
+                                  type="text"
+                                  placeholder="Current gym or fitness center affiliation"
+                                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all"
+                                  disabled={pending}
+                                  value={form.gymAffiliation}
+                                  onChange={(e) =>
+                                    setForm({ ...form, gymAffiliation: e.target.value })
+                                  }
+                                />
+                              </div>
+                            </div>
+
+                            <div>
+                              <label className="text-sm font-medium text-gray-700 mb-1 mt-5 block">
+                                Certifications
+                              </label>
+                              <div className="relative">
+                                <textarea
+                                  placeholder="List your certifications (e.g., NASM-CPT, ACE, ACSM, etc.)"
+                                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all"
+                                  disabled={pending}
+                                  rows={3}
+                                  value={form.certifications}
+                                  onChange={(e) =>
+                                    setForm({ ...form, certifications: e.target.value })
+                                  }
+                                />
+                              </div>
+                            </div>
+
+                            <div>
+                              <label className="text-sm font-medium text-gray-700 mb-1 mt-5 block">
+                                Professional Bio
+                              </label>
+                              <div className="relative">
+                                <textarea
+                                  placeholder="Write a short bio about yourself and your fitness journey"
+                                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all"
+                                  disabled={pending}
+                                  rows={4}
+                                  value={form.bio}
+                                  onChange={(e) =>
+                                    setForm({ ...form, bio: e.target.value })
+                                  }
+                                />
+                              </div>
+                            </div>
+
+                            <div>
+                              <label className="text-sm font-medium text-gray-700 mb-1 mt-5 block">
+                                Training Philosophy
+                              </label>
+                              <div className="relative">
+                                <textarea
+                                  placeholder="Describe your training philosophy and approach to fitness"
+                                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all"
+                                  disabled={pending}
+                                  rows={4}
+                                  value={form.trainingPhilosophy}
+                                  onChange={(e) =>
+                                    setForm({ ...form, trainingPhilosophy: e.target.value })
+                                  }
+                                />
+                              </div>
+                            </div>
+
+                            <div>
+                              <label className="text-sm font-medium text-gray-700 mb-1 mt-5 block">
+                                Upload Certifications (Optional)
+                              </label>
+                              <div className="relative">
+                                <input
+                                  type="file"
+                                  multiple
+                                  accept=".pdf,.jpg,.jpeg,.png"
+                                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all"
+                                  disabled={pending}
+                                  onChange={(e) => {
+                                    const files = e.target.files;
+                                    if (files) {
+                                      const fileNames = Array.from(files).map(file => file.name).join(', ');
+                                      setForm({ ...form, certificationFiles: fileNames });
+                                    }
+                                  }}
+                                />
+                                <p className="text-xs text-gray-500 mt-1">
+                                  Upload your certification documents (PDF, JPG, PNG)
+                                </p>
+                              </div>
+                            </div>
+                          </>
                         )}
 
                         {form.role === 'doctor' && (
-                          <div>
-                            <label className="text-sm font-medium text-gray-700 mb-1 mt-5 block">
-                              Medical Specialization
-                            </label>
-                            <div className="relative">
-                              <select
-                                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all"
-                                disabled={pending}
-                                value={form.specialization}
-                                onChange={(e) =>
-                                  setForm({ ...form, specialization: e.target.value })
-                                }
-                                required
-                              >
-                                <option value="">Select specialization</option>
-                                <option value="sports-medicine">Sports Medicine</option>
-                                <option value="orthopedics">Orthopedics</option>
-                                <option value="nutrition">Nutrition</option>
-                                <option value="physiotherapy">Physiotherapy</option>
-                                <option value="general-practice">General Practice</option>
-                                <option value="cardiology">Cardiology</option>
-                              </select>
+                          <>
+                            <div>
+                              <label className="text-sm font-medium text-gray-700 mb-1 mt-5 block">
+                                Medical Specialization
+                              </label>
+                              <div className="relative">
+                                <select
+                                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all"
+                                  disabled={pending}
+                                  value={form.specialization}
+                                  onChange={(e) =>
+                                    setForm({ ...form, specialization: e.target.value })
+                                  }
+                                  required
+                                >
+                                  <option value="">Select your medical specialization</option>
+                                  <option value="sports-medicine">Sports Medicine</option>
+                                  <option value="orthopedics">Orthopedics</option>
+                                  <option value="nutrition">Nutrition</option>
+                                  <option value="physiotherapy">Physiotherapy</option>
+                                  <option value="general-practice">General Practice</option>
+                                  <option value="cardiology">Cardiology</option>
+                                  <option value="endocrinology">Endocrinology</option>
+                                  <option value="rehabilitation">Rehabilitation Medicine</option>
+                                </select>
+                              </div>
                             </div>
-                          </div>
+
+                            <div>
+                              <label className="text-sm font-medium text-gray-700 mb-1 mt-5 block">
+                                Medical License Number
+                              </label>
+                              <div className="relative">
+                                <input
+                                  type="text"
+                                  placeholder="Enter your medical license number"
+                                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all"
+                                  disabled={pending}
+                                  value={form.medicalLicense}
+                                  onChange={(e) =>
+                                    setForm({ ...form, medicalLicense: e.target.value })
+                                  }
+                                  required
+                                />
+                              </div>
+                            </div>
+
+                            <div>
+                              <label className="text-sm font-medium text-gray-700 mb-1 mt-5 block">
+                                Hospital/Clinic Affiliation
+                              </label>
+                              <div className="relative">
+                                <input
+                                  type="text"
+                                  placeholder="Current hospital or clinic affiliation"
+                                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all"
+                                  disabled={pending}
+                                  value={form.hospitalAffiliation}
+                                  onChange={(e) =>
+                                    setForm({ ...form, hospitalAffiliation: e.target.value })
+                                  }
+                                />
+                              </div>
+                            </div>
+
+                            <div>
+                              <label className="text-sm font-medium text-gray-700 mb-1 mt-5 block">
+                                Professional Bio
+                              </label>
+                              <div className="relative">
+                                <textarea
+                                  placeholder="Write a professional bio highlighting your medical expertise and experience"
+                                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all"
+                                  disabled={pending}
+                                  rows={4}
+                                  value={form.professionalBio}
+                                  onChange={(e) =>
+                                    setForm({ ...form, professionalBio: e.target.value })
+                                  }
+                                />
+                              </div>
+                            </div>
+
+                            <div>
+                              <label className="text-sm font-medium text-gray-700 mb-1 mt-5 block">
+                                Upload Medical Certifications (Optional)
+                              </label>
+                              <div className="relative">
+                                <input
+                                  type="file"
+                                  multiple
+                                  accept=".pdf,.jpg,.jpeg,.png"
+                                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all"
+                                  disabled={pending}
+                                  onChange={(e) => {
+                                    const files = e.target.files;
+                                    if (files) {
+                                      const fileNames = Array.from(files).map(file => file.name).join(', ');
+                                      setForm({ ...form, certificationFiles: fileNames });
+                                    }
+                                  }}
+                                />
+                                <p className="text-xs text-gray-500 mt-1">
+                                  Upload your medical certification documents (PDF, JPG, PNG)
+                                </p>
+                              </div>
+                            </div>
+                          </>
                         )}
+
+                        <div className="bg-amber-50 border border-amber-200 p-3 rounded-lg mt-4">
+                          <p className="text-xs text-amber-700">
+                            <strong>Note:</strong> Professional accounts require verification. 
+                            You'll need to wait for approval before accessing all features.
+                          </p>
+                        </div>
                       </>
                     )}
 
@@ -325,7 +612,7 @@ export default function Register() {
                         </button>
                       </div>
                       <p className="text-xs text-gray-500 mt-2">
-                        Password must be at least 8 characters
+                        Password must be at least 6 characters
                       </p>
                     </div>
 
@@ -362,6 +649,13 @@ export default function Register() {
                           )}
                         </button>
                       </div>
+                      {form.confirmPassword && (
+                        <p className={`text-xs mt-1 ${
+                          form.password === form.confirmPassword ? 'text-green-600' : 'text-red-600'
+                        }`}>
+                          {form.password === form.confirmPassword ? '✓ Passwords match' : '✗ Passwords do not match'}
+                        </p>
+                      )}
                     </div>
 
                     <div className="flex items-start">
@@ -372,6 +666,11 @@ export default function Register() {
                           type="checkbox"
                           className="h-4 w-4 bg-gray-50 border-gray-300 rounded text-cyan-600 focus:ring-cyan-500"
                           required
+                          disabled={pending}
+                          checked={form.termsAgreed}
+                          onChange={(e) =>
+                            setForm({ ...form, termsAgreed: e.target.checked })
+                          }
                         />
                       </div>
                       <div className="ml-3 text-sm mt-5">
@@ -394,23 +693,53 @@ export default function Register() {
                       </div>
                     </div>
 
+                    {/* Authenticity Confirmation for Professionals */}
+                    {(form.role === 'trainer' || form.role === 'doctor') && (
+                      <div className="flex items-start">
+                        <div className="flex items-center mt-3 h-5">
+                          <input
+                            id="authenticity"
+                            name="authenticity"
+                            type="checkbox"
+                            className="h-4 w-4 bg-gray-50 border-gray-300 rounded text-cyan-600 focus:ring-cyan-500"
+                            required
+                            disabled={pending}
+                            checked={form.authenticityConfirmed}
+                            onChange={(e) =>
+                              setForm({ ...form, authenticityConfirmed: e.target.checked })
+                            }
+                          />
+                        </div>
+                        <div className="ml-3 text-sm mt-3">
+                          <label htmlFor="authenticity" className="text-gray-700">
+                            I confirm that all the information provided is authentic and accurate. 
+                            I understand that providing false information may result in account suspension.
+                          </label>
+                        </div>
+                      </div>
+                    )}
+
                     <button
                       type="submit"
-                      className="w-full mt-3 bg-cyan-600 hover:bg-cyan-700 text-white px-4 py-2.5 rounded-md font-medium shadow-sm hover:shadow-md transition-all"
-                      disabled={pending}
+                      className="w-full mt-3 bg-cyan-600 hover:bg-cyan-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white px-4 py-2.5 rounded-md font-medium shadow-sm hover:shadow-md transition-all"
+                      disabled={pending || !!error}
                     >
-                      {pending ? "Creating account..." : "Create account"}
+                      {pending ? (
+                        <span className="flex items-center justify-center">
+                          <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          Creating account...
+                        </span>
+                      ) : "Create account"}
                     </button>
 
                     <div className="text-center">
                       <p className="text-gray-600 text-sm mt-5">
                         Already have an account?{" "}
                         <a
-                          href="#"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            window.location.href = "/auth/login";
-                          }}
+                          href="/auth/login"
                           className="text-cyan-600 hover:text-cyan-700 font-medium"
                         >
                           Sign in
@@ -418,7 +747,7 @@ export default function Register() {
                       </p>
                     </div>
 
-                    {/* Social Signup Buttons - Professional Design */}
+                    {/* Social signup section remains the same */}
                     <div className="relative">
                       <div className="absolute inset-0 flex items-center">
                         <div className="w-full border-t border-gray-200" />
@@ -433,7 +762,9 @@ export default function Register() {
                     <div className="w-full mt-3">
                       <button
                         type="button"
+                        onClick={(e) => e.preventDefault()}
                         className="w-full bg-white border border-gray-200 px-4 py-2.5 rounded-md flex items-center justify-center hover:bg-gray-50 transition-colors shadow-sm"
+                        disabled={pending}
                       >
                         <img
                           src="https://www.google.com/favicon.ico"
@@ -444,13 +775,12 @@ export default function Register() {
                       </button>
                     </div>
 
-                    {/* Added Social Media Links */}
+                    {/* Social Media Links */}
                     <div className="pt-6 border-t border-gray-200">
                       <p className="text-center text-sm text-gray-600 mb-4">
                         Follow us on social media
                       </p>
                       <div className="flex justify-center items-center space-x-6">
-                        {/* Instagram Logo */}
                         <a
                           href="https://www.instagram.com/wellzonelanka?igsh=YzF3aW05Znhkdjc2"
                           target="_blank"
@@ -467,7 +797,6 @@ export default function Register() {
                           </svg>
                         </a>
 
-                        {/* YouTube Logo */}
                         <a
                           href="https://www.youtube.com/@wellzonelanka/community"
                           target="_blank"

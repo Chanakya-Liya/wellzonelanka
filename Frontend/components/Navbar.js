@@ -3,22 +3,50 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useState, useRef, useEffect } from "react";
-import { FaBars, FaTimes } from "react-icons/fa"; // Using react-icons for a menu icon
 
-export default function Navbar() {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const dropdownRef = useRef(null);
+  const userMenuRef = useRef(null);
+
+  // Check for logged-in user on component mount
+  useEffect(() => {
+    const user = localStorage.getItem('currentUser');
+    if (user) {
+      try {
+        setCurrentUser(JSON.parse(user));
+      } catch (error) {
+        console.error('Error parsing user data:', error);
+        localStorage.removeItem('currentUser');
+      }
+    }
+  }, []);
 
   // Toggle dropdown on click
   const handleMobileMenuClick = () => {
     setMobileMenuOpen((prev) => !prev);
   };
 
-  // Close dropdown if click outside
+  // Toggle user menu
+  const handleUserMenuClick = () => {
+    setUserMenuOpen((prev) => !prev);
+  };
+
+  // Handle logout
+  const handleLogout = () => {
+    localStorage.removeItem('currentUser');
+    setCurrentUser(null);
+    setUserMenuOpen(false);
+    // Redirect to home page
+    window.location.href = '/';
+  };
+
+  // Close dropdowns if click outside
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setMobileMenuOpen(false);
+      }
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target)) {
+        setUserMenuOpen(false);
       }
     };
 
@@ -73,12 +101,6 @@ export default function Navbar() {
               className="text-gray-700 hover:text-cyan-600 font-medium transition-colors duration-300 hover:scale-105"
             >
               Contact us
-            </Link>
-            <Link
-              href="/auth/login"
-              className="text-gray-700 hover:text-cyan-600 font-medium transition-colors duration-300 hover:scale-105"
-            >
-              Log in / Sign up
             </Link>
           </div>
 
