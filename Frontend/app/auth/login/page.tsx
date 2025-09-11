@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import styles from './login.module.css';
+import Image from "next/image"; // Fix: Import Image
 
 export default function Login() {
   const router = useRouter();
@@ -22,9 +23,9 @@ export default function Login() {
 
   // Array of fitness-related images for the slideshow
   const images = [
-    "../assets/login1.png",
-    "../assets/login2.png",
-    "../assets/login3.png",
+    "/assets/login1.png",
+    "/assets/login2.png",
+    "/assets/login3.png",
   ];
 
   // Set up the slideshow effect
@@ -104,179 +105,181 @@ export default function Login() {
 
       {/* Main Content */}
       <div className="relative z-10 max-w-7xl mx-auto pt-6">
-              <div className="space-y-6">
-                {/* Header */}
-                <div>
-                  <h1 className="text-3xl font-bold text-gray-800">
-                    Welcome back
-                  </h1>
-                  <h2 className="text-xl font-medium text-gray-600">
-                    Sign in to{" "}
-                    <span className="text-cyan-600 font-semibold">
-                      WellZone Lanka
-                    </span>
-                  </h2>
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-start p-6" style={{ paddingTop: "60px" }}>
+          {/* Left Side - Login Form (5 columns) */}
+          <div className="md:col-span-5">
+            <div className="space-y-6">
+              {/* Header */}
+              <div>
+                <h1 className="text-3xl font-bold text-gray-800">
+                  Welcome back
+                </h1>
+                <h2 className="text-xl font-medium text-gray-600">
+                  Sign in to{" "}
+                  <span className="text-cyan-600 font-semibold">
+                    WellZone Lanka
+                  </span>
+                </h2>
+              </div>
+
+              {/* Success Message */}
+              {success && (
+                <div className="bg-green-50 border border-green-200 p-3 rounded-lg flex items-center gap-2 text-sm text-green-600">
+                  <CheckCircle className="h-4 w-4" />
+                  <span>{success}</span>
                 </div>
+              )}
 
-                {/* Success Message */}
-                {success && (
-                  <div className="bg-green-50 border border-green-200 p-3 rounded-lg flex items-center gap-2 text-sm text-green-600">
-                    <CheckCircle className="h-4 w-4" />
-                    <span>{success}</span>
-                  </div>
-                )}
+              {/* Error Message */}
+              {error && (
+                <div className="bg-red-50 border border-red-200 p-3 rounded-lg flex items-center gap-2 text-sm text-red-600">
+                  <TriangleAlert className="h-4 w-4" />
+                  <span>{error}</span>
+                </div>
+              )}
 
-                {/* Error Message */}
-                {error && (
-                  <div className="bg-red-50 border border-red-200 p-3 rounded-lg flex items-center gap-2 text-sm text-red-600">
-                    <TriangleAlert className="h-4 w-4" />
-                    <span>{error}</span>
-                  </div>
-                )}
-
-                {/* Form Fields */}
-                <div className="space-y-5">
-                  <div className="px-2 sm:px-6">
-                    <div>
-                      <label className="text-sm font-medium text-gray-700 mb-1 block">
-                        Email Address
-                      </label>
-                      <div className="relative">
-                        <input
-                          type="email"
-                          placeholder="Enter your email address"
-                          className="w-full px-4 py-2.5 bg-gray-50 border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all"
-                          disabled={pending}
-                          value={form.email}
-                          onChange={(e) =>
-                            setForm({ ...form, email: e.target.value })
-                          }
-                          required
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="text-sm font-medium text-gray-700 mb-1 mt-5 block">
-                        Password
-                      </label>
-                      <div className="relative">
-                        <input
-                          type={showPassword ? "text" : "password"}
-                          placeholder="Enter your password"
-                          className="w-full px-4 py-2.5 bg-gray-50 border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 pr-10 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all"
-                          disabled={pending}
-                          value={form.password}
-                          onChange={(e) =>
-                            setForm({ ...form, password: e.target.value })
-                          }
-                          required
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowPassword(!showPassword)}
-                          className="absolute inset-y-0 right-0 flex items-center pr-3"
-                        >
-                          {showPassword ? (
-                            <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-600" />
-                          ) : (
-                            <Eye className="h-5 w-5 text-gray-400 hover:text-gray-600" />
-                          )}
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-between mt-5">
-                      <div className="flex items-center">
-                        <input
-                          id="remember"
-                          name="remember"
-                          type="checkbox"
-                          className="h-4 w-4 bg-gray-50 border-gray-300 rounded text-cyan-600 focus:ring-cyan-500"
-                        />
-                        <label htmlFor="remember" className="ml-2 text-sm text-gray-700">
-                          Remember me
-                        </label>
-                      </div>
-                      <Link
-                        href="/auth/forgot-password"
-                        className="text-sm text-cyan-600 hover:text-cyan-700 font-medium"
-                      >
-                        Forgot password?
-                      </Link>
-                    </div>
-
-                    <button
-                      type="submit"
-                      className="w-full mt-3 bg-cyan-600 hover:bg-cyan-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white px-4 py-2.5 rounded-md font-medium shadow-sm hover:shadow-md transition-all"
-                      disabled={pending}
-                    >
-                      {pending ? (
-                        <span className="flex items-center justify-center">
-                          <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                          </svg>
-                          Signing in...
-                        </span>
-                      ) : "Sign in"}
-                    </button>
-
-                    <div className="text-center">
-                      <p className="text-gray-600 text-sm mt-5">
-                        Don't have an account?{" "}
-                        <Link
-                          href="/auth/register"
-                          className="text-cyan-600 hover:text-cyan-700 font-medium"
-                        >
-                          Sign up
-                        </Link>
-                      </p>
-                    </div>
-
-                    {/* Social login section */}
+              {/* Form Fields */}
+              <form className="space-y-5" onSubmit={handleSubmit}>
+                <div className="px-2 sm:px-6">
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 mb-1 block">
+                      Email Address
+                    </label>
                     <div className="relative">
-                      <div className="absolute inset-0 flex items-center">
-                        <div className="w-full border-t border-gray-200" />
-                      </div>
-                      <div className="relative mt-3 flex justify-center text-sm">
-                        <span className="px-2 bg-white text-gray-500">
-                          or continue with
-                        </span>
-                      </div>
+                      <input
+                        type="email"
+                        placeholder="Enter your email address"
+                        className="w-full px-4 py-2.5 bg-gray-50 border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all"
+                        disabled={pending}
+                        value={form.email}
+                        onChange={(e) =>
+                          setForm({ ...form, email: e.target.value })
+                        }
+                        required
+                      />
                     </div>
+                  </div>
 
-                    <div className="w-full mt-3">
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 mb-1 mt-5 block">
+                      Password
+                    </label>
+                    <div className="relative">
+                      <input
+                        type={showPassword ? "text" : "password"}
+                        placeholder="Enter your password"
+                        className="w-full px-4 py-2.5 bg-gray-50 border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 pr-10 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all"
+                        disabled={pending}
+                        value={form.password}
+                        onChange={(e) =>
+                          setForm({ ...form, password: e.target.value })
+                        }
+                        required
+                      />
                       <button
                         type="button"
-                        onClick={(e) => e.preventDefault()}
-                        className="w-full bg-white border border-gray-200 px-4 py-2.5 rounded-md flex items-center justify-center hover:bg-gray-50 transition-colors shadow-sm"
-                        disabled={pending}
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute inset-y-0 right-0 flex items-center pr-3"
                       >
-                        <img
-                          src="https://www.google.com/favicon.ico"
-                          alt="Google"
-                          className="w-5 h-5 mr-2"
-                        />
-                        <span className="font-medium text-gray-600">Continue with Google</span>
+                        {showPassword ? (
+                          <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                        ) : (
+                          <Eye className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                        )}
                       </button>
                     </div>
+                  </div>
 
-                    {/* Demo Users Info */}
-                    <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg mt-3">
-                      <h4 className="text-sm font-medium text-blue-800 mb-2">Demo Users (for testing):</h4>
-                      <div className="text-xs text-blue-700 space-y-1">
-                        <p>First register a user, then use those credentials to login</p>
-                        <p>The system will remember registered users during this session</p>
-                      </div>
+                  <div className="flex items-center justify-between mt-5">
+                    <div className="flex items-center">
+                      <input
+                        id="remember"
+                        name="remember"
+                        type="checkbox"
+                        className="h-4 w-4 bg-gray-50 border-gray-300 rounded text-cyan-600 focus:ring-cyan-500"
+                      />
+                      <label htmlFor="remember" className="ml-2 text-sm text-gray-700">
+                        Remember me
+                      </label>
+                    </div>
+                    <Link
+                      href="/auth/forgot-password"
+                      className="text-sm text-cyan-600 hover:text-cyan-700 font-medium"
+                    >
+                      Forgot password?
+                    </Link>
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="w-full mt-3 bg-cyan-600 hover:bg-cyan-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white px-4 py-2.5 rounded-md font-medium shadow-sm hover:shadow-md transition-all"
+                    disabled={pending}
+                  >
+                    {pending ? (
+                      <span className="flex items-center justify-center">
+                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Signing in...
+                      </span>
+                    ) : "Sign in"}
+                  </button>
+
+                  <div className="text-center">
+                    <p className="text-gray-600 text-sm mt-5">
+                      Don't have an account?{" "}
+                      <Link
+                        href="/auth/register"
+                        className="text-cyan-600 hover:text-cyan-700 font-medium"
+                      >
+                        Sign up
+                      </Link>
+                    </p>
+                  </div>
+
+                  {/* Social login section */}
+                  <div className="relative">
+                    <div className="absolute inset-0 flex items-center">
+                      <div className="w-full border-t border-gray-200" />
+                    </div>
+                    <div className="relative mt-3 flex justify-center text-sm">
+                      <span className="px-2 bg-white text-gray-500">
+                        or continue with
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="w-full mt-3">
+                    <button
+                      type="button"
+                      onClick={(e) => e.preventDefault()}
+                      className="w-full bg-white border border-gray-200 px-4 py-2.5 rounded-md flex items-center justify-center hover:bg-gray-50 transition-colors shadow-sm"
+                      disabled={pending}
+                    >
+                      <img
+                        src="https://www.google.com/favicon.ico"
+                        alt="Google"
+                        className="w-5 h-5 mr-2"
+                      />
+                      <span className="font-medium text-gray-600">Continue with Google</span>
+                    </button>
+                  </div>
+
+                  {/* Demo Users Info */}
+                  <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg mt-3">
+                    <h4 className="text-sm font-medium text-blue-800 mb-2">Demo Users (for testing):</h4>
+                    <div className="text-xs text-blue-700 space-y-1">
+                      <p>First register a user, then use those credentials to login</p>
+                      <p>The system will remember registered users during this session</p>
                     </div>
                   </div>
                 </div>
-              </div>
-            </form>
+              </form>
+            </div>
           </div>
 
-          {/* Right Side - Professional Image Section */}
+          {/* Right Side - Professional Image Section (7 columns) */}
           <div className="md:col-span-7 rounded-lg overflow-hidden shadow-xl relative">
             {/* Image slideshow with fade transition */}
             <div className="relative w-full" style={{ height: "650px" }}>
