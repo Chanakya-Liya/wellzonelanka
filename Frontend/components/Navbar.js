@@ -3,12 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useState, useRef, useEffect } from "react";
-import { User, LogOut, ChevronDown } from "lucide-react";
 
-export default function Navbar() {
-  const [servicesOpen, setServicesOpen] = useState(false);
-  const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const [currentUser, setCurrentUser] = useState(null);
   const dropdownRef = useRef(null);
   const userMenuRef = useRef(null);
 
@@ -26,8 +21,8 @@ export default function Navbar() {
   }, []);
 
   // Toggle dropdown on click
-  const handleServicesClick = () => {
-    setServicesOpen((prev) => !prev);
+  const handleMobileMenuClick = () => {
+    setMobileMenuOpen((prev) => !prev);
   };
 
   // Toggle user menu
@@ -48,7 +43,7 @@ export default function Navbar() {
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setServicesOpen(false);
+        setMobileMenuOpen(false);
       }
       if (userMenuRef.current && !userMenuRef.current.contains(event.target)) {
         setUserMenuOpen(false);
@@ -65,9 +60,9 @@ export default function Navbar() {
     <nav className="shadow-sm fixed w-full z-30 py-3 px-1 bg-opacity-25 bg-black">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 bg-white rounded-[3rem] shadow-lg">
         <div className="flex justify-between items-center h-16">
-          {/* Logo */}
+          {/* Logo and Brand Name */}
           <div className="flex items-center">
-            <Link href="/">
+            <Link href="/" onClick={() => setMobileMenuOpen(false)}>
               <Image
                 src="/assets/lgo.png"
                 alt="Logo"
@@ -81,7 +76,7 @@ export default function Navbar() {
             </span>
           </div>
 
-          {/* Nav Links */}
+          {/* Desktop Nav Links */}
           <div className="hidden md:flex items-center space-x-8">
             <Link
               href="/"
@@ -89,100 +84,82 @@ export default function Navbar() {
             >
               Home
             </Link>
-
-            {/* Services Dropdown */}
             <Link
               href="/services"
-               className="text-gray-700 hover:text-cyan-600 font-medium transition-colors duration-300 hover:scale-105"
+              className="text-gray-700 hover:text-cyan-600 font-medium transition-colors duration-300 hover:scale-105"
             >
               Services
             </Link>
-            
             <Link
               href="/about"
               className="text-gray-700 hover:text-cyan-600 font-medium transition-colors duration-300 hover:scale-105"
             >
               About us
             </Link>
-
             <Link
               href="/contact"
               className="text-gray-700 hover:text-cyan-600 font-medium transition-colors duration-300 hover:scale-105"
             >
               Contact us
             </Link>
-
-            {/* User Authentication Section */}
-            {currentUser ? (
-              // Logged in user menu
-              <div className="relative" ref={userMenuRef}>
-                <button
-                  onClick={handleUserMenuClick}
-                  className="flex items-center space-x-2 text-gray-700 hover:text-cyan-600 font-medium transition-colors duration-300"
-                >
-                  <User className="h-5 w-5" />
-                  <span>Hi, {currentUser.firstName}</span>
-                  <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${userMenuOpen ? 'rotate-180' : ''}`} />
-                </button>
-                
-                {/* User Dropdown Menu */}
-                {userMenuOpen && (
-                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg border border-gray-200 py-1 z-50">
-                    <div className="px-4 py-2 text-sm text-gray-600 border-b border-gray-100">
-                      <div className="font-medium">{currentUser.firstName} {currentUser.lastName}</div>
-                      <div className="text-xs text-gray-500">{currentUser.email}</div>
-                      <div className="text-xs text-cyan-600 capitalize">{currentUser.role}</div>
-                    </div>
-                    
-                    {/* Role-based navigation */}
-                    {currentUser.role === 'doctor' && (
-                      <Link
-                        href="/doctor-dashboard"
-                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
-                        onClick={() => setUserMenuOpen(false)}
-                      >
-                        Doctor Dashboard
-                      </Link>
-                    )}
-                    
-                    {currentUser.role === 'trainer' && (
-                      <Link
-                        href="/trainer-dashboard"
-                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
-                        onClick={() => setUserMenuOpen(false)}
-                      >
-                        Trainer Dashboard
-                      </Link>
-                    )}
-                    
-                    <Link
-                      href="/profile"
-                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
-                      onClick={() => setUserMenuOpen(false)}
-                    >
-                      My Profile
-                    </Link>
-                    
-                    <button
-                      onClick={handleLogout}
-                      className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors flex items-center space-x-2"
-                    >
-                      <LogOut className="h-4 w-4" />
-                      <span>Logout</span>
-                    </button>
-                  </div>
-                )}
-              </div>
-            ) : (
-              // Not logged in - show login/signup link
-              <Link
-                href="/auth/login"
-                className="text-gray-700 hover:text-cyan-600 font-medium transition-colors duration-300 hover:scale-105"
-              >
-                Log in / Sign up
-              </Link>
-            )}
           </div>
+
+          {/* Mobile Menu Button */}
+          <div className="md:hidden flex items-center">
+            <button
+              onClick={handleMobileMenuClick}
+              className="text-gray-700 hover:text-cyan-600 focus:outline-none"
+              aria-label="Toggle mobile menu"
+            >
+              {mobileMenuOpen ? <FaTimes size={24} /> : <FaBars size={24} />}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Mobile Menu Panel (Hidden by default, shown on small screens) */}
+      <div
+        ref={dropdownRef}
+        className={`${
+          mobileMenuOpen ? "block" : "hidden"
+        } md:hidden bg-white mt-2 py-2 rounded-lg shadow-lg mx-4`}
+      >
+        <div className="flex flex-col items-center space-y-4">
+          <Link
+            href="/"
+            className="w-full text-center text-gray-700 hover:text-cyan-600 font-medium py-2 transition-colors duration-300"
+            onClick={() => setMobileMenuOpen(false)}
+          >
+            Home
+          </Link>
+          <Link
+            href="/services"
+            className="w-full text-center text-gray-700 hover:text-cyan-600 font-medium py-2 transition-colors duration-300"
+            onClick={() => setMobileMenuOpen(false)}
+          >
+            Services
+          </Link>
+          <Link
+            href="/about"
+            className="w-full text-center text-gray-700 hover:text-cyan-600 font-medium py-2 transition-colors duration-300"
+            onClick={() => setMobileMenuOpen(false)}
+          >
+            About us
+          </Link>
+          <Link
+            href="/contact"
+            className="w-full text-center text-gray-700 hover:text-cyan-600 font-medium py-2 transition-colors duration-300"
+            onClick={() => setMobileMenuOpen(false)}
+          >
+            Contact us
+          </Link>
+          <Link
+            href="/auth/login"
+            className="w-full text-center text-gray-700 hover:text-cyan-600 font-medium py-2 transition-colors duration-300"
+            onClick={() => setMobileMenuOpen(false)}
+          >
+            Log in / Sign up
+          </Link>
         </div>
       </div>
     </nav>
