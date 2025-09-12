@@ -65,8 +65,28 @@ class FirebaseDataService {
         isApproved: userData.role === 'user' // Auto-approve regular users
       };
 
-      // Add document to Firestore
-      const docRef = await addDoc(collection(db, this.usersCollection), userDoc);
+      // Add document to Firestore with retry logic
+      let docRef;
+      let retries = 3;
+      
+      while (retries > 0) {
+        try {
+          docRef = await addDoc(collection(db, this.usersCollection), userDoc);
+          break;
+        } catch (error: any) {
+          retries--;
+          if (error.code === 'unavailable' && retries > 0) {
+            console.log(`Firestore unavailable, retrying... (${retries} attempts left)`);
+            await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second before retry
+            continue;
+          }
+          throw error;
+        }
+      }
+      
+      if (!docRef) {
+        throw new Error('Failed to create user after multiple attempts');
+      }
       
       const newUser: User = {
         id: docRef.id,
@@ -109,23 +129,38 @@ class FirebaseDataService {
 
   async getUserByEmail(email: string): Promise<User | null> {
     try {
-      const q = query(
-        collection(db, this.usersCollection), 
-        where('email', '==', email)
-      );
+      let retries = 3;
       
-      const querySnapshot = await getDocs(q);
-      
-      if (querySnapshot.empty) {
-        return null;
+      while (retries > 0) {
+        try {
+          const q = query(
+            collection(db, this.usersCollection), 
+            where('email', '==', email)
+          );
+          
+          const querySnapshot = await getDocs(q);
+          
+          if (querySnapshot.empty) {
+            return null;
+          }
+
+          const userDoc = querySnapshot.docs[0];
+          return {
+            id: userDoc.id,
+            ...userDoc.data()
+          } as User;
+        } catch (error: any) {
+          retries--;
+          if (error.code === 'unavailable' && retries > 0) {
+            console.log(`Firestore unavailable, retrying getUserByEmail... (${retries} attempts left)`);
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            continue;
+          }
+          throw error;
+        }
       }
-
-      const userDoc = querySnapshot.docs[0];
-      return {
-        id: userDoc.id,
-        ...userDoc.data()
-      } as User;
-
+      
+      return null;
     } catch (error) {
       console.error('Error getting user by email:', error);
       return null;
@@ -186,17 +221,33 @@ class FirebaseDataService {
 
   async getAllUsers(): Promise<User[]> {
     try {
-      const querySnapshot = await getDocs(collection(db, this.usersCollection));
-      const users: User[] = [];
+      let retries = 3;
       
-      querySnapshot.forEach((doc) => {
-        users.push({
-          id: doc.id,
-          ...doc.data()
-        } as User);
-      });
+      while (retries > 0) {
+        try {
+          const querySnapshot = await getDocs(collection(db, this.usersCollection));
+          const users: User[] = [];
+          
+          querySnapshot.forEach((doc) => {
+            users.push({
+              id: doc.id,
+              ...doc.data()
+            } as User);
+          });
 
-      return users;
+          return users;
+        } catch (error: any) {
+          retries--;
+          if (error.code === 'unavailable' && retries > 0) {
+            console.log(`Firestore unavailable, retrying getAllUsers... (${retries} attempts left)`);
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            continue;
+          }
+          throw error;
+        }
+      }
+      
+      return [];
     } catch (error) {
       console.error('Error getting all users:', error);
       return [];

@@ -1,253 +1,253 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Calendar, Clock, User, Video, X } from "lucide-react";
-import { getAppointments, cancelAppointment } from "@/app/lib/actions";
-import { useToast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Calendar, Clock, User, ArrowLeft, Mail } from "lucide-react";
+import { Suspense } from "react";
 
 interface Appointment {
   id: string;
-  trainer: string;
+  userId: string;
+  userName: string;
+  userEmail: string;
+  trainerId: string;
+  trainerName: string;
   date: string;
   time: string;
-  status: "pending" | "confirmed" | "cancelled";
-  notes?: string;
+  status: 'pending' | 'confirmed' | 'cancelled';
+  createdAt: string;
 }
 
-export default function MyAppointmentsPage() {
-  const { toast } = useToast();
+function MyAppointmentsContent() {
+  const searchParams = useSearchParams();
+  const trainerId = searchParams.get('trainerId');
+  const trainerName = searchParams.get('trainerName');
+  
   const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [selectedAppointment, setSelectedAppointment] =
-    useState<Appointment | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
+  // Fetch user-specific appointments
   useEffect(() => {
     const fetchAppointments = async () => {
       try {
-        const data = await getAppointments();
-        setAppointments(data);
+        // Get user ID from localStorage
+        let userId = localStorage.getItem('userId');
+        const userEmail = localStorage.getItem('userEmail');
+        
+        // If no userId but have email, use email as fallback
+        if (!userId && userEmail) {
+          userId = userEmail;
+          console.log('Using email as userId:', userId);
+        }
+        
+        if (!userId) {
+          setError('Please book an appointment first to see your appointments');
+          setLoading(false);
+          return;
+        }
+
+        console.log('Fetching appointments for userId:', userId);
+
+        let response;
+        
+        if (trainerId) {
+          // Fetch appointments for specific trainer
+          response = await fetch(`/api/appointments/user/${userId}`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ trainerId }),
+          });
+        } else {
+          // Fetch all user appointments
+          response = await fetch(`/api/appointments/user/${userId}`);
+        }
+
+        const data = await response.json();
+        console.log('Appointments API response:', data);
+
+        if (response.ok) {
+          if (data.success) {
+            setAppointments(data.appointments || []);
+            if (data.appointments?.length === 0) {
+              setError('No appointments found. Book your first appointment to see it here.');
+            }
+          } else {
+            setError(data.message || 'Failed to fetch appointments');
+          }
+        } else {
+          setError('Failed to fetch appointments. Please try again.');
+        }
       } catch (error) {
-        toast({
-          title: "Error",
-          description: "Failed to load appointments",
-          variant: "destructive",
-        });
+        console.error('Error fetching appointments:', error);
+        setError('Failed to fetch appointments. Please check your connection and try again.');
       } finally {
-        setIsLoading(false);
+        setLoading(false);
       }
     };
 
     fetchAppointments();
-  }, [toast]);
+  }, [trainerId]);
 
-  const handleCancelAppointment = async (id: string) => {
-    try {
-      await cancelAppointment(id);
-      setAppointments(
-        appointments.map((app) =>
-          app.id === id ? { ...app, status: "cancelled" } : app
-        )
-      );
-      toast({
-        title: "Appointment Cancelled",
-        description: "Your appointment has been cancelled successfully.",
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to cancel appointment",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const getStatusBadge = (status: string) => {
+  const getStatusColor = (status: string) => {
     switch (status) {
-      case "confirmed":
-        return (
-          <span className="bg-green-500 text-white px-3 py-1 rounded-full text-sm">
-            Confirmed
-          </span>
-        );
-      case "pending":
-        return (
-          <span className="border border-yellow-600 text-yellow-600 px-3 py-1 rounded-full text-sm">
-            Pending
-          </span>
-        );
-      case "cancelled":
-        return (
-          <span className="bg-red-500 text-white px-3 py-1 rounded-full text-sm">
-            Cancelled
-          </span>
-        );
+      case 'confirmed':
+        return 'bg-green-100 text-green-800';
+      case 'pending':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'cancelled':
+        return 'bg-red-100 text-red-800';
       default:
-        return (
-          <span className="border border-gray-500 text-gray-500 px-3 py-1 rounded-full text-sm">
-            Unknown
-          </span>
-        );
+        return 'bg-gray-100 text-gray-800';
     }
   };
 
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString("en-US", {
-      weekday: "long",
-      year: "numeric",
-      month: "long",
-      day: "numeric",
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
     });
   };
 
-  return (
-    <div className="bg-white min-h-screen flex items-center justify-center py-10 text-black">
-      <div className="container mx-auto p-4 max-w-4xl ">
-        <div className="flex items-center mb-8">
-          <Link href="/gym-dash" className="mr-4">
-            <button className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors">
-              Back
-            </button>
-          </Link>
-          <h1 className="text-3xl font-bold">My Appointments</h1>
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading appointments...</p>
         </div>
+      </div>
+    );
+  }
 
-        <div className="bg-white rounded-lg shadow-lg overflow-hidden">
-          <div className="p-6 border-b border-gray-200">
-            <h2 className="text-2xl font-bold">
-              Manage your scheduled sessions
-            </h2>
-            <p className="text-gray-600">
-              View, reschedule, or cancel your upcoming appointments with
-              trainers.
-            </p>
-          </div>
-          <div className="p-6">
-            {isLoading ? (
-              <div className="flex justify-center p-8">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-sky-500"></div>
-              </div>
-            ) : appointments.length === 0 ? (
-              <div className="text-center p-8">
-                <p className="text-gray-500 mb-4">
-                  You don&apos;t have any appointments yet.
-                </p>
-                <Link
-                  href="/gym-trainer/book-appointment"
-                  className="px-4 py-2 bg-sky-500 text-white rounded-lg hover:bg-sky-700 transition-colors"
-                >
-                  Book an Appointment
-                </Link>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {appointments.map((appointment) => (
-                  <div
-                    key={appointment.id}
-                    className={`bg-white rounded-lg shadow-sm overflow-hidden ${
-                      appointment.status === "cancelled" ? "opacity-60" : ""
-                    }`}
-                  >
-                    <div className="p-4 grid grid-cols-1 md:grid-cols-4 gap-4">
-                      <div className="flex items-center space-x-3">
-                        <Calendar className="h-5 w-5 text-gray-400" />
-                        <div>
-                          <p className="text-sm font-medium">Date</p>
-                          <p className="text-sm text-gray-500">
-                            {formatDate(appointment.date)}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center space-x-3">
-                        <Clock className="h-5 w-5 text-gray-400" />
-                        <div>
-                          <p className="text-sm font-medium">Time</p>
-                          <p className="text-sm text-gray-500">
-                            {appointment.time}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center space-x-3">
-                        <User className="h-5 w-5 text-gray-400" />
-                        <div>
-                          <p className="text-sm font-medium">Trainer</p>
-                          <p className="text-sm text-gray-500">
-                            {appointment.trainer}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between md:justify-end space-x-2">
-                        {getStatusBadge(appointment.status)}
-                        <div className="flex space-x-2">
-                          {appointment.status === "confirmed" && (
-                            <Link
-                              href="/gym-trainer/video-session"
-                              className="px-3 py-1 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors flex items-center"
-                            >
-                              <Video className="h-4 w-4 mr-1" />
-                              Join
-                            </Link>
-                          )}
-                          {appointment.status !== "cancelled" && (
-                            <button
-                              className="px-3 py-1 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors flex items-center"
-                              onClick={() =>
-                                setSelectedAppointment(appointment)
-                              }
-                            >
-                              <X className="h-4 w-4 mr-1" />
-                              Cancel
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+  return (
+    <div className="min-h-screen bg-gray-50 py-8">
+      <div className="max-w-4xl mx-auto px-4">
+        {/* Header */}
+        <div className="flex items-center mb-8">
+          <Link href={`/gym-dash${trainerId ? `?trainerId=${trainerId}&trainerName=${encodeURIComponent(trainerName || '')}` : ''}`} className="mr-4">
+            <Button variant="outline">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Services
+            </Button>
+          </Link>
+          <div>
+            <h1 className="text-3xl font-bold">My Appointments</h1>
+            {trainerName && (
+              <div className="flex items-center mt-2 text-gray-600">
+                <User className="h-4 w-4 mr-2" />
+                <span>With: <strong>{decodeURIComponent(trainerName)}</strong></span>
               </div>
             )}
           </div>
-          <div className="p-6 border-t border-gray-200 flex justify-center">
-            <Link
-              href="/gym-dash/book-appointment"
-              className="px-4 py-2 bg-sky-500 text-white rounded-2xl hover:bg-sky-700 transition-colors"
-            >
-              Book New Appointment
-            </Link>
-          </div>
         </div>
 
-        {/* Cancel Appointment Dialog */}
-        {selectedAppointment && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-            <div className="bg-white rounded-lg p-6 max-w-md w-full">
-              <h2 className="text-xl font-bold mb-4">Cancel Appointment</h2>
+        {error && (
+          <Card className="mb-6 border-red-200 bg-red-50">
+            <CardContent className="pt-6">
+              <p className="text-red-700">{error}</p>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Appointments List */}
+        {appointments.length === 0 ? (
+          <Card>
+            <CardContent className="pt-6 text-center">
+              <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold mb-2">No Appointments Found</h3>
               <p className="text-gray-600 mb-6">
-                Are you sure you want to cancel this appointment? This action
-                cannot be undone.
+                {trainerId 
+                  ? "You don't have any appointments with this trainer yet."
+                  : "You don't have any appointments scheduled."}
               </p>
-              <div className="flex justify-end space-x-4">
-                <button
-                  className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors"
-                  onClick={() => setSelectedAppointment(null)}
-                >
-                  Keep Appointment
-                </button>
-                <button
-                  className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-700 transition-colors"
-                  onClick={() => {
-                    handleCancelAppointment(selectedAppointment.id);
-                    setSelectedAppointment(null);
-                  }}
-                >
-                  Cancel Appointment
-                </button>
-              </div>
-            </div>
+              {trainerId && (
+                <Link href={`/gym-dash/book-appointment?trainerId=${trainerId}&trainerName=${encodeURIComponent(trainerName || '')}`}>
+                  <Button className="bg-cyan-600 hover:bg-cyan-700">
+                    Book Your First Appointment
+                  </Button>
+                </Link>
+              )}
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="space-y-4">
+            {appointments.map((appointment) => (
+              <Card key={appointment.id} className="hover:shadow-md transition-shadow">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-lg">
+                      Appointment #{appointment.id.slice(-6)}
+                    </CardTitle>
+                    <Badge className={getStatusColor(appointment.status)}>
+                      {appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1)}
+                    </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-3">
+                      <div className="flex items-center text-gray-600">
+                        <Calendar className="h-4 w-4 mr-2" />
+                        <span className="font-medium">Date:</span>
+                        <span className="ml-2">{formatDate(appointment.date)}</span>
+                      </div>
+                      <div className="flex items-center text-gray-600">
+                        <Clock className="h-4 w-4 mr-2" />
+                        <span className="font-medium">Time:</span>
+                        <span className="ml-2">{appointment.time}</span>
+                      </div>
+                    </div>
+                    <div className="space-y-3">
+                      <div className="flex items-center text-gray-600">
+                        <User className="h-4 w-4 mr-2" />
+                        <span className="font-medium">Trainer:</span>
+                        <span className="ml-2">{appointment.trainerName}</span>
+                      </div>
+                      <div className="flex items-center text-gray-600">
+                        <Mail className="h-4 w-4 mr-2" />
+                        <span className="font-medium">Your Email:</span>
+                        <span className="ml-2">{appointment.userEmail}</span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="mt-4 text-xs text-gray-500">
+                    Booked on: {new Date(appointment.createdAt).toLocaleDateString()}
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+
+        {/* Quick Actions */}
+        {trainerId && (
+          <div className="mt-8 flex justify-center">
+            <Link href={`/gym-dash/book-appointment?trainerId=${trainerId}&trainerName=${encodeURIComponent(trainerName || '')}`}>
+              <Button className="bg-cyan-600 hover:bg-cyan-700">
+                Book Another Appointment
+              </Button>
+            </Link>
           </div>
         )}
       </div>
     </div>
+  );
+}
+
+export default function MyAppointmentsPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen">Loading...</div>}>
+      <MyAppointmentsContent />
+    </Suspense>
   );
 }

@@ -119,6 +119,9 @@ export default function Trainers() {
 
     const matchesFilter = 
       selectedFilter === "all" ||
+      (selectedFilter === "weight-training" && trainer.specialization === "weight-training") ||
+      (selectedFilter === "yoga" && trainer.specialization === "yoga") ||
+      (selectedFilter === "nutrition" && trainer.specialization === "nutrition") ||
       (selectedFilter === "top-rated" && trainer.rating && trainer.rating >= 4.8) ||
       (selectedFilter === "experienced" && trainer.experience >= 5) ||
       (selectedFilter === "available" && trainer.isApproved);
@@ -174,9 +177,10 @@ export default function Trainers() {
       {/* Search and Filter Section */}
       <section className="py-6 px-4 sm:px-6 lg:px-8 bg-white border-b">
         <div className="max-w-7xl mx-auto">
-          {/* Search Bar */}
-          <div className="mb-4">
-            <div className="relative w-full max-w-md">
+          {/* Search Bar and Filters in one row */}
+          <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
+            {/* Search Bar */}
+            <div className="relative w-full lg:w-96">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
               <input
                 type="text"
@@ -186,54 +190,74 @@ export default function Trainers() {
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-          </div>
-          
-          {/* Filter Buttons */}
-          <div className="flex flex-wrap gap-3 mb-4">
-            <Button 
-              variant={selectedFilter === "all" ? "default" : "outline"} 
-              size="sm"
-              onClick={() => setSelectedFilter("all")}
-              className="rounded-full"
-            >
-              All
-            </Button>
-            <Button 
-              variant={selectedFilter === "weight-training" ? "default" : "outline"} 
-              size="sm"
-              onClick={() => setSelectedFilter("weight-training")}
-              className="rounded-full"
-            >
-              Weight Training
-            </Button>
-            <Button 
-              variant={selectedFilter === "yoga" ? "default" : "outline"} 
-              size="sm"
-              onClick={() => setSelectedFilter("yoga")}
-              className="rounded-full"
-            >
-              Yoga
-            </Button>
-            <Button 
-              variant={selectedFilter === "nutrition" ? "default" : "outline"} 
-              size="sm"
-              onClick={() => setSelectedFilter("nutrition")}
-              className="rounded-full"
-            >
-              Nutrition
-            </Button>
-            <Button 
-              variant={selectedFilter === "more-filters" ? "default" : "outline"} 
-              size="sm"
-              onClick={() => setSelectedFilter("more-filters")}
-              className="rounded-full"
-            >
-              More Filters
-            </Button>
+            
+            {/* Filter Buttons */}
+            <div className="flex flex-wrap gap-3">
+              <Button 
+                variant={selectedFilter === "all" ? "default" : "outline"} 
+                size="sm"
+                onClick={() => setSelectedFilter("all")}
+                className={`rounded-full ${
+                  selectedFilter === "all" 
+                    ? "bg-cyan-600 hover:bg-cyan-700 text-white" 
+                    : "bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
+                }`}
+              >
+                All
+              </Button>
+              <Button 
+                variant={selectedFilter === "weight-training" ? "default" : "outline"} 
+                size="sm"
+                onClick={() => setSelectedFilter("weight-training")}
+                className={`rounded-full ${
+                  selectedFilter === "weight-training" 
+                    ? "bg-cyan-600 hover:bg-cyan-700 text-white" 
+                    : "bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
+                }`}
+              >
+                Weight Training
+              </Button>
+              <Button 
+                variant={selectedFilter === "yoga" ? "default" : "outline"} 
+                size="sm"
+                onClick={() => setSelectedFilter("yoga")}
+                className={`rounded-full ${
+                  selectedFilter === "yoga" 
+                    ? "bg-cyan-600 hover:bg-cyan-700 text-white" 
+                    : "bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
+                }`}
+              >
+                Yoga
+              </Button>
+              <Button 
+                variant={selectedFilter === "nutrition" ? "default" : "outline"} 
+                size="sm"
+                onClick={() => setSelectedFilter("nutrition")}
+                className={`rounded-full ${
+                  selectedFilter === "nutrition" 
+                    ? "bg-cyan-600 hover:bg-cyan-700 text-white" 
+                    : "bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
+                }`}
+              >
+                Nutrition
+              </Button>
+              <Button 
+                variant={selectedFilter === "more-filters" ? "default" : "outline"} 
+                size="sm"
+                onClick={() => setSelectedFilter("more-filters")}
+                className={`rounded-full ${
+                  selectedFilter === "more-filters" 
+                    ? "bg-cyan-600 hover:bg-cyan-700 text-white" 
+                    : "bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
+                }`}
+              >
+                More Filters
+              </Button>
+            </div>
           </div>
 
-          {/* Specialty Filters */}
-          <div className="flex flex-wrap gap-2">
+          {/* Specialty Filters - Second Row */}
+          <div className="flex flex-wrap gap-2 mt-4">
             <Button 
               variant={selectedSpecialty === "all" ? "secondary" : "ghost"} 
               size="sm"
