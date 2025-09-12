@@ -1,9 +1,12 @@
+"use client";
+
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import Navbar from "@/components/Navbar";
 import { Footer } from "@/app/exercise/Footer";
+import { useState, useEffect } from "react";
 
 import {
   Star,
@@ -12,64 +15,136 @@ import {
   ArrowRight,
   Users,
   Search,
+  MapPin,
+  Clock,
+  Award,
 } from "lucide-react";
 
+interface Trainer {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  role: string;
+  specialization: string;
+  experience: number;
+  gymAffiliation?: string;
+  certifications?: string;
+  bio?: string;
+  trainingPhilosophy?: string;
+  isApproved: boolean;
+  createdAt: string;
+  rating?: number;
+  reviewCount?: number;
+  hourlyRate?: string;
+  location?: string;
+  availableHours?: string;
+}
+
 export default function Trainers() {
-  // Mock data for trainers
-  const trainers = [
-    {
-      id: "trainer-1",
-      name: "Sanuka Siriwardhana",
-      image: "https://well-zone-assets.netlify.app/Sanuka%20Siriwardhana.png",
-      specialties: [
-        "Weight Training",
-        "Rehabilitation",
-        "Nutrition",
-        "Calisthenics",
-      ],
-      experience: "8 years",
-      rating: 4.9,
-      reviews: 254,
-      price: "Rs. 1,500/hour",
-      availability: "Mon-Fri, 6AM-8PM",
-    },
-    {
-      id: "trainer-2",
-      name: "Kaveen Adesh",
-      image: "https://well-zone-assets.netlify.app/Kaveen%20Adesh.png",
-      specialties: ["Yoga", "Pilates", "Flexibility"],
-      experience: "5 years",
-      rating: 4.5,
-      reviews: 220,
-      price: "Rs. 1,700/hour",
-      availability: "Tue-Sat, 7AM-7PM",
-    },
-    {
-      id: "trainer-3",
-      name: "Sylvester Silva",
-      image: "https://well-zone-assets.netlify.app/Sylvester%20Silva.png",
-      specialties: ["HIIT", "Functional Training", "Weight Loss"],
-      experience: "15 years",
-      rating: 5,
-      reviews: 450,
-      price: "Rs. 2,500/hour",
-      availability: "Mon-Sat, 5AM-9PM",
-    },
-    {
-      id: "trainer-4",
-      name: "Malinda Amarasinghe",
-      image: "https://well-zone-assets.netlify.app/Malinda%20Amarasinghe.png",
-      specialties: ["Senior Fitness", "Rehabilitation", "Low Impact Training"],
-      experience: "12 years",
-      rating: 4.9,
-      reviews: 350,
-      price: "Rs. 2,500/hour",
-      availability: "Mon-Fri, 8AM-6PM",
-    },
-  ];
+  const [trainers, setTrainers] = useState<Trainer[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedSpecialty, setSelectedSpecialty] = useState("all");
+  const [selectedFilter, setSelectedFilter] = useState("all");
+  const [error, setError] = useState<string | null>(null);
+
+  // Get specialty display name
+  const getSpecialtyDisplay = (specialty: string) => {
+    const specialtyMap: { [key: string]: string } = {
+      "weight-training": "Weight Training",
+      "cardio-fitness": "Cardio Fitness", 
+      "yoga": "Yoga",
+      "nutrition": "Nutrition",
+      "pilates": "Pilates",
+      "crossfit": "CrossFit",
+      "sports-specific": "Sports-Specific",
+      "functional-fitness": "Functional Fitness",
+    };
+    return specialtyMap[specialty] || specialty;
+  };
+
+  // Fetch trainers from database
+  useEffect(() => {
+    const fetchTrainers = async () => {
+      try {
+        setError(null);
+        const response = await fetch('/api/trainers/get-trainers');
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        console.log('API Response:', data);
+        
+        if (data.success) {
+          // Add mock data for display purposes since API might not have all fields
+          const enrichedTrainers = data.trainers.map((trainer: Trainer) => ({
+            ...trainer,
+            rating: trainer.rating || 4.8 + Math.random() * 0.2,
+            reviewCount: trainer.reviewCount || Math.floor(Math.random() * 100) + 20,
+            hourlyRate: trainer.hourlyRate || `Rs. ${(2000 + Math.random() * 3000).toFixed(0)}/hour`,
+            location: trainer.location || 'Sri Lanka',
+            availableHours: trainer.availableHours || 'Mon-Fri: 6AM-9PM'
+          }));
+          
+          setTrainers(enrichedTrainers || []);
+          console.log(`Loaded ${enrichedTrainers.length} trainers from database`);
+        } else {
+          throw new Error(data.message || 'Failed to fetch trainers');
+        }
+      } catch (error) {
+        console.error('Error fetching trainers:', error);
+        setError('Failed to load trainers from database');
+        setTrainers([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTrainers();
+  }, []);
+
+  // Filter trainers based on search and specialty
+  const filteredTrainers = trainers.filter((trainer) => {
+    const matchesSearch = 
+      trainer.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      trainer.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      trainer.specialization.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesSpecialty = 
+      selectedSpecialty === "all" || 
+      trainer.specialization === selectedSpecialty;
+
+    const matchesFilter = 
+      selectedFilter === "all" ||
+      (selectedFilter === "top-rated" && trainer.rating && trainer.rating >= 4.8) ||
+      (selectedFilter === "experienced" && trainer.experience >= 5) ||
+      (selectedFilter === "available" && trainer.isApproved);
+
+    return trainer.isApproved && matchesSearch && matchesSpecialty && matchesFilter;
+  });
+
+  // Get unique specialties for filter buttons
+  const uniqueSpecialties = [...new Set(trainers.map(trainer => trainer.specialization))];
+
+  if (loading) {
+    return (
+      <div className="flex flex-col min-h-screen bg-white text-black">
+        <Navbar />
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-600 mx-auto"></div>
+            <p className="mt-4 text-gray-600">Loading trainers...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="flex flex-col min-h-screen bg-white text-black">
+    <div className="flex flex-col min-h-screen bg-gray-50 text-black">
       
       {/* Navbar */}
       <Navbar />
@@ -97,123 +172,188 @@ export default function Trainers() {
       </section>
 
       {/* Search and Filter Section */}
-      <section className="py-8 px-4 sm:px-6 lg:px-8 border-b">
+      <section className="py-6 px-4 sm:px-6 lg:px-8 bg-white border-b">
         <div className="max-w-7xl mx-auto">
-          <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
-            <div className="relative w-full md:w-96">
+          {/* Search Bar */}
+          <div className="mb-4">
+            <div className="relative w-full max-w-md">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
               <input
                 type="text"
-                placeholder="Search trainers by name or specialty..."
-                className="w-full pl-10 pr-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                placeholder="Search trainers by name or Speciality"
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-            <div className="flex flex-wrap gap-2 text-white ">
-              <Button variant="outline" size="sm">
-                All
+          </div>
+          
+          {/* Filter Buttons */}
+          <div className="flex flex-wrap gap-3 mb-4">
+            <Button 
+              variant={selectedFilter === "all" ? "default" : "outline"} 
+              size="sm"
+              onClick={() => setSelectedFilter("all")}
+              className="rounded-full"
+            >
+              All
+            </Button>
+            <Button 
+              variant={selectedFilter === "weight-training" ? "default" : "outline"} 
+              size="sm"
+              onClick={() => setSelectedFilter("weight-training")}
+              className="rounded-full"
+            >
+              Weight Training
+            </Button>
+            <Button 
+              variant={selectedFilter === "yoga" ? "default" : "outline"} 
+              size="sm"
+              onClick={() => setSelectedFilter("yoga")}
+              className="rounded-full"
+            >
+              Yoga
+            </Button>
+            <Button 
+              variant={selectedFilter === "nutrition" ? "default" : "outline"} 
+              size="sm"
+              onClick={() => setSelectedFilter("nutrition")}
+              className="rounded-full"
+            >
+              Nutrition
+            </Button>
+            <Button 
+              variant={selectedFilter === "more-filters" ? "default" : "outline"} 
+              size="sm"
+              onClick={() => setSelectedFilter("more-filters")}
+              className="rounded-full"
+            >
+              More Filters
+            </Button>
+          </div>
+
+          {/* Specialty Filters */}
+          <div className="flex flex-wrap gap-2">
+            <Button 
+              variant={selectedSpecialty === "all" ? "secondary" : "ghost"} 
+              size="sm"
+              onClick={() => setSelectedSpecialty("all")}
+              className={`text-xs px-3 py-1 transition-all ${
+                selectedSpecialty === "all" 
+                  ? "bg-gray-200 text-gray-800 hover:bg-gray-300" 
+                  : "bg-transparent text-gray-600 hover:bg-gray-100"
+              }`}
+            >
+              All Specialties
+            </Button>
+            {uniqueSpecialties.map((specialty) => (
+              <Button 
+                key={specialty}
+                variant={selectedSpecialty === specialty ? "secondary" : "ghost"} 
+                size="sm"
+                onClick={() => setSelectedSpecialty(specialty)}
+                className={`text-xs px-3 py-1 transition-all ${
+                  selectedSpecialty === specialty 
+                    ? "bg-gray-200 text-gray-800 hover:bg-gray-300" 
+                    : "bg-transparent text-gray-600 hover:bg-gray-100"
+                }`}
+              >
+                {getSpecialtyDisplay(specialty)}
               </Button>
-              <Button variant="outline" size="sm">
-                Weight Training
-              </Button>
-              <Button variant="outline" size="sm">
-                Yoga
-              </Button>
-              <Button variant="outline" size="sm">
-                Rehabilitation
-              </Button>
-              <Button variant="outline" size="sm">
-                Nutrition
-              </Button>
-              <Button variant="outline" size="sm">
-                More Filters
-              </Button>
-            </div>
+            ))}
           </div>
         </div>
       </section>
 
       {/* Trainers Grid */}
-      <section className="wellzone-section">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {trainers.map((trainer) => (
-            <Card key={trainer.id} className="wellzone-card overflow-hidden">
-              <div className="relative h-48" style={{ height: "300px" }}>
-                <img
-                  src={trainer.image}
-                  alt={trainer.name}
-                  className="w-full h-full object-cover"
-                />
-                <div className="absolute top-2 right-2 bg-background/80 backdrop-blur-sm px-2 py-1 rounded-md flex items-center">
-                  <Star className="h-4 w-4 text-yellow-500 mr-1" />
-                  <span className="text-sm font-medium">{trainer.rating}</span>
+      <section className="py-8 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto">
+          {error && (
+            <div className="text-center text-red-600 mb-6">
+              <p>{error}</p>
+            </div>
+          )}
+          
+          {filteredTrainers.length === 0 ? (
+            <div className="text-center py-12">
+              {error ? (
+                <div className="text-red-600">
+                  <p className="text-lg font-semibold mb-2">Unable to load trainers</p>
+                  <p>{error}</p>
                 </div>
-              </div>
-              <CardContent className="pt-6">
-                <h3 className="text-xl font-semibold mb-1">{trainer.name}</h3>
-                <p className="text-sm text-muted-foreground mb-3">
-                  {trainer.experience} experience
-                </p>
-
-                <div className="flex flex-wrap gap-1 mb-4">
-                  {trainer.specialties.map((specialty, index) => (
-                    <Badge key={index} variant="secondary" className="text-xs">
-                      {specialty}
-                    </Badge>
-                  ))}
+              ) : (
+                <div className="text-gray-600">
+                  <p className="text-lg font-semibold mb-2">No trainers found</p>
+                  <p>
+                    {searchTerm || selectedSpecialty !== "all" 
+                      ? "No trainers match your search criteria. Try adjusting your filters."
+                      : "No registered trainers are currently available. Please check back later."}
+                  </p>
                 </div>
-
-                <div className="flex items-center justify-between text-sm">
-                  <div className="flex items-center">
-                    <Calendar className="h-4 w-4 mr-1 text-muted-foreground" />
-                    <span className="text-muted-foreground">
-                      {trainer.availability}
-                    </span>
+              )}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-12">
+              {filteredTrainers.map((trainer) => (
+                <Card key={trainer.id} className="overflow-hidden hover:shadow-xl transition-all duration-300 bg-white border-0 shadow-md">
+                  {/* Trainer Background */}
+                  <div className="relative h-56 bg-gradient-to-br from-[#06CBF2] via-[#06CBF2] to-[#0BB5D8]">
+                    {/* Rating Badge */}
+                    <div className="absolute top-3 right-3 bg-black/70 backdrop-blur-sm px-2 py-1 rounded-full flex items-center">
+                      <Star className="h-3 w-3 text-yellow-400 fill-yellow-400 mr-1" />
+                      <span className="text-white text-xs font-medium">
+                        {trainer.rating?.toFixed(1) || '4.9'}
+                      </span>
+                    </div>
                   </div>
-                  <span className="font-medium">{trainer.price}</span>
-                </div>
-              </CardContent>
-              <CardFooter className="flex flex-col space-y-2">
-                <Button asChild className="w-full">
-                  <Link href={`/trainers/${trainer.id}`}>
-                    View Profile <ArrowRight className="ml-2 h-4 w-4" />
-                  </Link>
-                </Button>
-              </CardFooter>
-            </Card>
-          ))}
-        </div>
-      </section>
 
-      {/* Become a Trainer Section */}
-      <section className="wellzone-section bg-muted" id="comments">
-        <div className="max-w-4xl mx-auto">
-          <div className="flex flex-col md:flex-row items-center gap-8">
-            <div className="md:w-1/2">
-              <h2 className="text-3xl font-bold mb-4">
-                Join Our Trainer Network
-              </h2>
-              <p className="text-muted-foreground mb-6">
-                Are you a certified fitness professional? Join our platform to
-                connect with clients, expand your reach, and grow your online
-                training business.
-              </p>
-              <Button asChild size="lg" className="trainer-button">
-                <Link href="/gym-doc-home">
-                  <Users className="mr-2 h-5 w-5" /> Apply as a Trainer
-                </Link>
-              </Button>
-            </div>
-            <div className="md:w-1/2">
-              <img
-                src="https://well-zone-assets.netlify.app/Situp%20Girl.jpeg"
-                alt="Become a trainer"
-                className="rounded-lg shadow-lg"
-              />
-            </div>
-          </div>
-         
-        </div>
+                  <CardContent className="p-4">
+                    {/* Trainer Name */}
+                    <h3 className="text-lg font-bold mb-1 text-gray-900">
+                      {trainer.firstName} {trainer.lastName}
+                    </h3>
+                    
+                    {/* Experience */}
+                    <p className="text-sm text-gray-600 mb-3">
+                      {trainer.experience} years experience
+                    </p>
 
+                    {/* Specializations */}
+                    <div className="flex flex-wrap gap-1 mb-3">
+                      <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-800 hover:bg-blue-200">
+                        {getSpecialtyDisplay(trainer.specialization)}
+                      </Badge>
+                      {trainer.certifications && (
+                        <Badge variant="secondary" className="text-xs bg-green-100 text-green-800 hover:bg-green-200">
+                          <Award className="h-3 w-3 mr-1" />
+                          Certified
+                        </Badge>
+                      )}
+                    </div>
+
+                    {/* Stats Row */}
+                    <div className="flex items-center justify-between text-xs text-gray-600 mb-4">
+                      <div className="flex items-center">
+                        <Calendar className="h-3 w-3 mr-1" />
+                        <span>Available</span>
+                      </div>
+                      <span className="text-sm text-gray-900">
+                        {trainer.hourlyRate || 'Contact for rates'}
+                      </span>
+                    </div>
+                  </CardContent>
+
+                  <CardFooter className="p-4 pt-0">
+                    <Link href={`/trainers/${trainer.id}`} className="flex items-center justify-center w-full text-black hover:text-gray-700 transition-colors">
+                      <span className="text-sm font-medium">View Profile</span>
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Link>
+                  </CardFooter>
+                </Card>
+              ))}
+            </div>
+          )}
+        </div>
       </section>
       <Footer />
     </div>

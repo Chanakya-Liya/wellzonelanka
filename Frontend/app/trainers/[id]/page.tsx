@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -23,133 +23,236 @@ import {
   ThumbsUp,
 } from "lucide-react";
 
-// Mock data for trainers
-const trainersData = {
-  "trainer-1": {
-    id: "trainer-1",
-    name: "Sanuka Siriwardhana",
-    image: "https://well-zone-assets.netlify.app/Sanuka%20Siriwardhana.png",
-    coverImage: "https://well-zone-assets.netlify.app/Background1.jpeg",
-    specialties: [
-      "Weight Training",
-      "Rehabilitation",
-      "Nutrition",
-      "Calisthenics",
-    ],
-    experience: "4 years",
-    rating: 4.9,
-    reviews: 254,
-    price: "Rs. 1,500/hour",
-    availability: "Mon-Fri, 6AM-8PM",
-    bio: "Certified personal trainer with 4 years of experience specializing in weight training, rehabilitation, nutrition and Calisthenics. I help clients achieve their fitness goals through personalized training programs and nutritional guidance. My approach focuses on building sustainable habits for long-term success.",
-    certifications: [
-      "Certified Personal Trainer (CPT)",
-      "Rehabilitation Specialist",
-      "Sports Nutrition Certification",
-      "First Aid and CPR Certified",
-    ],
-    education: [
-      "Bachelor's Degree in Sports Science, University of Colombo",
-      "Diploma in Nutrition, Institute of Health Sciences",
-    ],
-    languages: ["English", "Sinhala", "Tamil"],
-  },
-  "trainer-2": {
-    id: "trainer-2",
-    name: "Kaveen Adesh",
-    image: "https://well-zone-assets.netlify.app/Kaveen%20Adesh.png",
-    coverImage: "https://well-zone-assets.netlify.app/Background2.jpeg",
-    specialties: ["Yoga", "Pilates", "Flexibility"],
-    experience: "5 years",
-    rating: 4.5,
-    reviews: 220,
-    price: "Rs. 1,700/hour",
-    availability: "Tue-Sat, 7AM-7PM",
-    bio: "Certified yoga instructor and Pilates trainer with 5 years of experience. I specialize in helping clients improve flexibility, reduce stress, and build core strength. My holistic approach focuses on mind-body connection and proper alignment for safe and effective practice.",
-    certifications: [
-      "Registered Yoga Teacher (RYT-200)",
-      "Certified Pilates Instructor",
-      "Meditation Coach",
-      "First Aid Certified",
-    ],
-    education: [
-      "Diploma in Yoga Therapy, Yoga Alliance",
-      "Certificate in Pilates Instruction, Body Control Pilates",
-    ],
-    languages: ["English", "Sinhala"],
-  },
-  "trainer-3": {
-    id: "trainer-3",
-    name: "Sylvester silva",
-    image: "https://well-zone-assets.netlify.app/Sylvester%20Silva.png",
-    coverImage: "https://well-zone-assets.netlify.app/Background3.jpeg",
-    specialties: ["HIIT", "Functional Training", "Weight Loss"],
-    experience: "15 years",
-    rating: 5,
-    reviews: 450,
-    price: "Rs. 2,500/hour",
-    availability: "Mon-Sat, 5AM-9PM",
-    bio: "Highly experienced fitness trainer with 15 years of expertise in HIIT, Functional Training, and Weight Loss. He specializes in helping clients achieve peak physical performance through high-intensity training programs and tailored workout plans. His methods emphasize strength, endurance, and sustainable fitness routines that align with each individual's goals.",
-    certifications: [
-      "Certified Functional Trainer (CFT)",
-      "High-Intensity Interval Training (HIIT) Specialist",
-      "Weight Loss & Performance Coaching Certification",
-      "CPR & First Aid Certified",
-    ],
-    education: [
-      "Bachelor's Degree in Sports Science, University of Colombo",
-      "Diploma in Fitness & Nutrition, Institute of Health Sciences",
-    ],
-    languages: ["English", "Sinhala", "Tamil"],
-  },
-  "trainer-4": {
-    id: "trainer-4",
-    name: "Malinda Amarasinghe",
-    image: "https://well-zone-assets.netlify.app/Malinda%20Amarasinghe.png",
-    coverImage: "https://well-zone-assets.netlify.app/Background4.jpeg",
-    specialties: ["Senior Fitness", "Rehabilitation", "Low Impact"],
-    experience: "12 years",
-    rating: 4.9,
-    reviews: 350,
-    price: "Rs. 2,500/hour",
-    availability: "Mon-Fri, 8AM-6PM",
-    bio: "Dedicated fitness professional with 12 years of experience specializing in Senior Fitness, Rehabilitation, and Low-Impact Training. His approach focuses on improving mobility, strength, and overall well-being through personalized training programs tailored to each individual's needs. Malinda is passionate about helping clients—especially seniors and those recovering from injuries—build sustainable fitness habits for long-term health and vitality.",
-    certifications: [
-      "Certified Senior Fitness Trainer (CSFT)",
-      "Rehabilitation & Mobility Specialist",
-      "Low-Impact Training Certification",
-      "First Aid and CPR Certified",
-    ],
-    education: [
-      "Bachelor's Degree in Sports Science, University of Colombo",
-      "Diploma in Rehabilitation & Exercise Therapy, University of Colombo",
-    ],
-    languages: ["English", "Sinhala", "Tamil"],
-  },
-};
+interface Trainer {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  role: string;
+  specialization: string;
+  experience: number;
+  gymAffiliation?: string;
+  certifications?: string;
+  bio?: string;
+  trainingPhilosophy?: string;
+  isApproved: boolean;
+  createdAt: string;
+  rating?: number;
+  reviewCount?: number;
+  hourlyRate?: string;
+  location?: string;
+  availableHours?: string;
+}
+
+interface Booking {
+  id: string;
+  trainerId: string;
+  clientName: string;
+  clientEmail: string;
+  date: string;
+  time: string;
+  status: 'pending' | 'confirmed' | 'cancelled';
+  createdAt: string;
+}
 
 export default function TrainerProfile() {
   const params = useParams();
   const trainerId = params.id as string;
+  const [trainer, setTrainer] = useState<Trainer | null>(null);
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [bookingLoading, setBookingLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
+  const [clientName, setClientName] = useState("");
+  const [clientEmail, setClientEmail] = useState("");
+  const [bookingSuccess, setBookingSuccess] = useState<string | null>(null);
 
-  // Get the trainer data
-  const trainer = trainersData[trainerId as keyof typeof trainersData];
+  // Available time slots
+  const timeSlots = [
+    "06:00", "07:00", "08:00", "09:00", "10:00", "11:00",
+    "14:00", "15:00", "16:00", "17:00", "18:00", "19:00", "20:00"
+  ];
 
-  // If the trainer doesn't exist, show a message
-  if (!trainer) {
+  // Get specialty display name
+  const getSpecialtyDisplay = (specialty: string) => {
+    const specialtyMap: { [key: string]: string } = {
+      "weight-training": "Weight Training",
+      "cardio-fitness": "Cardio Fitness",
+      "yoga": "Yoga",
+      "nutrition": "Nutrition",
+      "pilates": "Pilates",
+      "crossfit": "CrossFit",
+      "sports-specific": "Sports-Specific",
+      "functional-fitness": "Functional Fitness",
+    };
+    return specialtyMap[specialty] || specialty;
+  };
+
+  // Generate calendar dates (next 30 days)
+  const generateCalendarDates = () => {
+    const dates = [];
+    const today = new Date();
+    
+    for (let i = 0; i < 30; i++) {
+      const date = new Date(today);
+      date.setDate(today.getDate() + i);
+      dates.push(date);
+    }
+    
+    return dates;
+  };
+
+  // Check if a date/time slot is booked
+  const isSlotBooked = (date: string, time: string) => {
+    return bookings.some(booking => 
+      booking.date === date && 
+      booking.time === time && 
+      booking.status !== 'cancelled'
+    );
+  };
+
+  // Handle booking submission
+  const handleBooking = async () => {
+    if (!selectedDate || !selectedTime || !clientName || !clientEmail) {
+      alert('Please fill in all fields and select a date/time');
+      return;
+    }
+
+    try {
+      setBookingLoading(true);
+      const response = await fetch(`/api/trainers/bookings/${trainerId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          clientName,
+          clientEmail,
+          date: selectedDate,
+          time: selectedTime,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setBookingSuccess('Booking created successfully! The trainer will contact you soon.');
+        setSelectedDate(null);
+        setSelectedTime(null);
+        setClientName('');
+        setClientEmail('');
+        
+        // Refresh bookings
+        const bookingsResponse = await fetch(`/api/trainers/bookings/${trainerId}`);
+        if (bookingsResponse.ok) {
+          const bookingsData = await bookingsResponse.json();
+          if (bookingsData.success) {
+            setBookings(bookingsData.bookings || []);
+          }
+        }
+      } else {
+        alert(data.message || 'Failed to create booking');
+      }
+    } catch (error) {
+      console.error('Error creating booking:', error);
+      alert('Failed to create booking. Please try again.');
+    } finally {
+      setBookingLoading(false);
+    }
+  };
+
+  // Fetch trainer data from database
+  useEffect(() => {
+    const fetchTrainer = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        const response = await fetch(`/api/trainers/get-trainer/${trainerId}`);
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        console.log('Trainer API Response:', data);
+        
+        if (data.success && data.trainer) {
+          // Enrich with display data
+          const enrichedTrainer = {
+            ...data.trainer,
+            rating: data.trainer.rating || 4.8 + Math.random() * 0.2,
+            reviewCount: data.trainer.reviewCount || Math.floor(Math.random() * 100) + 20,
+            hourlyRate: data.trainer.hourlyRate || `Rs. ${(2000 + Math.random() * 3000).toFixed(0)}/hour`,
+            location: data.trainer.location || 'Sri Lanka',
+            availableHours: data.trainer.availableHours || 'Mon-Fri: 6AM-9PM'
+          };
+          
+          setTrainer(enrichedTrainer);
+        } else {
+          throw new Error(data.message || 'Trainer not found');
+        }
+      } catch (error) {
+        console.error('Error fetching trainer:', error);
+        setError(error instanceof Error ? error.message : 'Failed to load trainer');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    const fetchBookings = async () => {
+      try {
+        const response = await fetch(`/api/trainers/bookings/${trainerId}`);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success) {
+            setBookings(data.bookings || []);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching bookings:', error);
+      }
+    };
+
+    if (trainerId) {
+      fetchTrainer();
+      fetchBookings();
+    }
+  }, [trainerId]);
+
+  // Loading state
+  if (loading) {
     return (
-      <div className="wellzone-section text-center">
-        <h1 className="text-3xl font-bold mb-4">Trainer Not Found</h1>
-        <p className="text-muted-foreground mb-8">
-          The requested trainer could not be found. Please try another trainer.
-        </p>
-        <Button asChild>
-          <Link href="/trainers">
-            <ArrowLeft className="mr-2 h-4 w-4" /> Back to Trainers
-          </Link>
-        </Button>
+      <div className="flex flex-col min-h-screen bg-white text-black">
+        <Navbar />
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-600 mx-auto"></div>
+            <p className="mt-4 text-gray-600">Loading trainer profile...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error || !trainer) {
+    return (
+      <div className="flex flex-col min-h-screen bg-white text-black">
+        <Navbar />
+        <div className="wellzone-section text-center">
+          <h1 className="text-3xl font-bold mb-4">Trainer Not Found</h1>
+          <p className="text-muted-foreground mb-8">
+            {error || "The requested trainer could not be found. Please try another trainer."}
+          </p>
+          <Button asChild>
+            <Link href="/trainers">
+              <ArrowLeft className="mr-2 h-4 w-4" /> Back to Trainers
+            </Link>
+          </Button>
+        </div>
       </div>
     );
   }
@@ -159,79 +262,76 @@ export default function TrainerProfile() {
       
       {/* Navbar */}
       <Navbar />
+      
       {/* Cover Image */}
-      <div className="relative h-64 md:h-80">
-        <img
-          src={trainer.coverImage}
-          alt={`${trainer.name} cover`}
-          className="w-full h-full object-cover"
-        />
+      <div className="relative h-64 md:h-80 bg-gradient-to-br from-cyan-100 to-blue-100">
         <div className="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent"></div>
       </div>
 
       {/* Profile Section */}
-      <section className="wellzone-section -mt-20 relative z-10" id="comments">
-        <div className="max-w-5xl mx-auto">
-          <div className="flex flex-col md:flex-row gap-8">
+      <section className="py-8 px-4 sm:px-6 lg:px-8 -mt-20 relative z-10">
+        <div className="max-w-6xl mx-auto">
+          <div className="flex flex-col lg:flex-row gap-8">
             {/* Sidebar */}
-            <div className="md:w-1/3">
-              <Card className="wellzone-card sticky top-24">
+            <div className="lg:w-1/3">
+              <Card className="sticky top-24 bg-white shadow-lg">
                 <CardContent className="pt-6">
                   <div className="flex flex-col items-center text-center">
-                    <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-background mb-4">
-                      <img
-                        src={trainer.image}
-                        alt={trainer.name}
-                        className="w-full h-full object-cover"
-                      />
+                    <div className="w-32 h-32 rounded-full bg-gradient-to-br from-cyan-100 to-blue-100 flex items-center justify-center border-4 border-white mb-4 shadow-lg">
+                      <div className="w-24 h-24 bg-cyan-600 rounded-full flex items-center justify-center text-white text-3xl font-bold">
+                        {trainer.firstName.charAt(0)}{trainer.lastName.charAt(0)}
+                      </div>
                     </div>
-                    <h1 className="text-2xl font-bold mb-1">{trainer.name}</h1>
+                    
+                    <h1 className="text-2xl font-bold mb-1">
+                      {trainer.firstName} {trainer.lastName}
+                    </h1>
+                    
                     <div className="flex items-center mb-2">
                       <Star className="h-4 w-4 text-yellow-500 mr-1" />
-                      <span className="font-medium">{trainer.rating}</span>
+                      <span className="font-medium">{trainer.rating?.toFixed(1) || '4.9'}</span>
                       <span className="text-muted-foreground ml-1">
-                        ({trainer.reviews} reviews)
+                        ({trainer.reviewCount || 50} reviews)
                       </span>
                     </div>
+                    
                     <p className="text-muted-foreground mb-4">
-                      {trainer.experience} experience
+                      {trainer.experience} years experience
                     </p>
 
-                    <div className="flex flex-wrap justify-center gap-1 mb-6">
-                      {trainer.specialties.map((specialty, index) => (
-                        <Badge key={index} variant="secondary">
-                          {specialty}
+                    <div className="flex flex-wrap justify-center gap-2 mb-6">
+                      <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+                        {getSpecialtyDisplay(trainer.specialization)}
+                      </Badge>
+                      {trainer.certifications && (
+                        <Badge variant="secondary" className="bg-green-100 text-green-800">
+                          <Award className="h-3 w-3 mr-1" />
+                          Certified
                         </Badge>
-                      ))}
+                      )}
                     </div>
 
                     <div className="w-full space-y-4">
                       <div className="flex items-center justify-between">
                         <span className="text-muted-foreground">Price:</span>
-                        <span className="font-medium">{trainer.price}</span>
+                        <span className="font-medium">{trainer.hourlyRate || 'Contact for rates'}</span>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground">
-                          Availability:
-                        </span>
-                        <span>{trainer.availability}</span>
+                        <span className="text-muted-foreground">Availability:</span>
+                        <span className="text-sm">{trainer.availableHours || 'Mon-Fri: 6AM-9PM'}</span>
                       </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground">
-                          Languages:
-                        </span>
-                        <span>{trainer.languages.join(", ")}</span>
-                      </div>
+                      {trainer.gymAffiliation && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-muted-foreground">Gym:</span>
+                          <span className="text-sm">{trainer.gymAffiliation}</span>
+                        </div>
+                      )}
                     </div>
 
                     <div className="w-full pt-6 space-y-3">
-                      <Button
-                        asChild
-                        variant="outline"
-                        className="w-full bg-sky-500"
-                      >
+                      <Button asChild variant="default" className="w-full bg-cyan-600 hover:bg-cyan-700">
                         <Link href="/gym-doc-home">
-                          <Video className="mr-2 h-4 w-4" /> Video Consultation
+                          <Video className="mr-2 h-4 w-4" /> Book Consultation
                         </Link>
                       </Button>
                     </div>
@@ -241,68 +341,78 @@ export default function TrainerProfile() {
             </div>
 
             {/* Main Content */}
-            <div className="md:w-2/3">
-              <Button asChild variant="outline" className="mb-6 bg-sky-500 ">
-                <Link href="/trainers">
-                  <ArrowLeft className="mr-2 h-4 w-4" /> Back to Trainers
-                </Link>
-              </Button>
-
-              <Tabs defaultValue="about">
+            <div className="lg:w-2/3">
+              <Tabs defaultValue="about" className="w-full">
+                <TabsList className="grid w-full grid-cols-1">
+                  <TabsTrigger value="about">About</TabsTrigger>
+                </TabsList>
+                
                 <TabsContent value="about" className="mt-6">
                   <div className="space-y-8">
                     <div>
                       <h2 className="text-2xl font-semibold mb-4">
-                        About {trainer.name}
+                        About {trainer.firstName} {trainer.lastName}
                       </h2>
-                      <p className="text-muted-foreground">{trainer.bio}</p>
+                      <p className="text-muted-foreground leading-relaxed">
+                        {trainer.bio || `${trainer.firstName} is a dedicated fitness professional with ${trainer.experience} years of experience specializing in ${getSpecialtyDisplay(trainer.specialization)}. Committed to helping clients achieve their fitness goals through personalized training programs.`}
+                      </p>
+                    </div>
+
+                    {trainer.trainingPhilosophy && (
+                      <div>
+                        <h3 className="text-xl font-semibold mb-4">Training Philosophy</h3>
+                        <p className="text-muted-foreground leading-relaxed">
+                          {trainer.trainingPhilosophy}
+                        </p>
+                      </div>
+                    )}
+
+                    {trainer.certifications && (
+                      <div>
+                        <h3 className="text-xl font-semibold mb-4">Certifications</h3>
+                        <div className="bg-gray-50 p-4 rounded-lg">
+                          <p className="text-sm text-gray-700">
+                            {trainer.certifications}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    <div>
+                      <h3 className="text-xl font-semibold mb-4">Specialization Details</h3>
+                      <Card className="bg-gradient-to-r from-cyan-50 to-blue-50">
+                        <CardContent className="pt-6">
+                          <div className="flex items-center mb-3">
+                            <Award className="h-5 w-5 text-cyan-600 mr-2" />
+                            <h4 className="font-semibold text-cyan-800">
+                              {getSpecialtyDisplay(trainer.specialization)}
+                            </h4>
+                          </div>
+                          <p className="text-sm text-gray-700">
+                            Specialized training and expertise in {getSpecialtyDisplay(trainer.specialization).toLowerCase()} 
+                            techniques and methodologies with {trainer.experience} years of hands-on experience.
+                          </p>
+                        </CardContent>
+                      </Card>
                     </div>
 
                     <div>
-                      <h3 className="text-xl font-semibold mb-4">
-                        Certifications
-                      </h3>
-                      <ul className="space-y-2">
-                        {trainer.certifications.map((cert, index) => (
-                          <li key={index} className="flex items-start">
-                            <Award className="h-5 w-5 text-primary mr-2 flex-shrink-0" />
-                            <span>{cert}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-
-                    <div>
-                      <h3 className="text-xl font-semibold mb-4">Education</h3>
-                      <ul className="space-y-2">
-                        {trainer.education.map((edu, index) => (
-                          <li key={index} className="flex items-start">
-                            <CheckCircle2 className="h-5 w-5 text-primary mr-2 flex-shrink-0" />
-                            <span>{edu}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-
-                    <div>
-                      <h3 className="text-xl font-semibold mb-4">
-                        Specialties
-                      </h3>
+                      <h3 className="text-xl font-semibold mb-4">Contact Information</h3>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {trainer.specialties.map((specialty, index) => (
-                          <Card key={index} className="bg-muted/50">
-                            <CardContent className="pt-6">
-                              <h4 className="font-semibold mb-2">
-                                {specialty}
-                              </h4>
-                              <p className="text-sm text-muted-foreground">
-                                Specialized training and expertise in{" "}
-                                {specialty.toLowerCase()} techniques and
-                                methodologies.
-                              </p>
-                            </CardContent>
-                          </Card>
-                        ))}
+                        <div className="flex items-center p-3 bg-gray-50 rounded-lg">
+                          <MessageSquare className="h-5 w-5 text-gray-600 mr-3" />
+                          <div>
+                            <p className="text-sm font-medium">Email</p>
+                            <p className="text-sm text-gray-600">{trainer.email}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center p-3 bg-gray-50 rounded-lg">
+                          <Clock className="h-5 w-5 text-gray-600 mr-3" />
+                          <div>
+                            <p className="text-sm font-medium">Experience</p>
+                            <p className="text-sm text-gray-600">{trainer.experience} years</p>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
