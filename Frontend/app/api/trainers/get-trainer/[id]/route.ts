@@ -12,21 +12,26 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
     while (retries > 0) {
       try {
-        // Try direct document lookup first
-        const trainerDoc = await getDoc(doc(db, 'trainers', id));
+        // Try direct document lookup in users collection (where trainers are stored)
+        const trainerDoc = await getDoc(doc(db, 'users', id));
         
         if (trainerDoc.exists()) {
-          trainer = {
-            id: trainerDoc.id,
-            ...trainerDoc.data()
-          };
-          console.log('Found trainer via direct lookup:', trainer.id);
-          break;
+          const userData = trainerDoc.data();
+          // Check if this user is a trainer
+          if (userData.role === 'trainer') {
+            trainer = {
+              id: trainerDoc.id,
+              ...userData
+            };
+            console.log('Found trainer via direct lookup:', trainer.id);
+            break;
+          }
         }
 
-        // If not found, try query by id field
+        // If not found, try query by id field in users collection
         const trainersQuery = query(
-          collection(db, 'trainers'),
+          collection(db, 'users'),
+          where('role', '==', 'trainer'),
           where('id', '==', id)
         );
         const querySnapshot = await getDocs(trainersQuery);
@@ -41,39 +46,27 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
           break;
         }
 
-        // Try alternative collection names
-        const alternativeCollections = ['trainer', 'staff', 'employees'];
-        for (const collectionName of alternativeCollections) {
-          try {
-            const altDoc = await getDoc(doc(db, collectionName, id));
-            if (altDoc.exists()) {
-              trainer = {
-                id: altDoc.id,
-                ...altDoc.data()
-              };
-              console.log(`Found trainer in ${collectionName} collection:`, trainer.id);
-              break;
-            }
-          } catch (error) {
-            console.log(`${collectionName} collection not accessible`);
-          }
-        }
-
-        if (trainer) break;
-
-        // Final fallback - search all trainers collections for any matching data
+        // Try searching all trainers for debugging
         try {
-          const allTrainersQuery = query(collection(db, 'trainers'));
+          const allTrainersQuery = query(
+            collection(db, 'users'),
+            where('role', '==', 'trainer')
+          );
           const allTrainersSnapshot = await getDocs(allTrainersQuery);
           
           console.log(`Searching through ${allTrainersSnapshot.docs.length} trainers for ID: ${id}`);
           
           allTrainersSnapshot.forEach((doc) => {
             const data = doc.data();
-            console.log('Found trainer document:', { docId: doc.id, data: JSON.stringify(data, null, 2) });
+            console.log('Found trainer document:', { 
+              docId: doc.id, 
+              name: `${data.firstName} ${data.lastName}`,
+              email: data.email,
+              specialization: data.specialization 
+            });
             
             // Check if this could be our trainer
-            if (doc.id === id || data.id === id || data.trainerId === id) {
+            if (doc.id === id) {
               trainer = {
                 id: doc.id,
                 ...data

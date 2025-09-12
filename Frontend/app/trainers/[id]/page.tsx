@@ -23,11 +23,15 @@ interface Trainer {
   id: string;
   firstName: string;
   lastName: string;
-  name?: string;
   email: string;
-  phone?: string;
   specialization: string;
   experience: number;
+  role: string;
+  licenseNumber?: string;
+  isApproved?: boolean;
+  createdAt?: string;
+  // Display fields
+  name?: string;
   hourlyRate?: string;
   rating?: number;
   reviewCount?: number;
@@ -35,7 +39,7 @@ interface Trainer {
   availableHours?: string;
   bio?: string;
   certifications?: string[];
-  image?: string;
+  phone?: string;
 }
 
 export default function TrainerProfile() {
@@ -68,14 +72,31 @@ export default function TrainerProfile() {
           
           if (data.success && data.trainer) {
             console.log('Setting trainer data:', data.trainer);
+            
+            // Map specialization to readable format
+            const specializationMap: { [key: string]: string } = {
+              'weight-training': 'Weight Training & Strength Coach',
+              'cardio': 'Cardio & Endurance Training',
+              'yoga': 'Yoga & Flexibility Training',
+              'nutrition': 'Nutrition & Diet Planning',
+              'crossfit': 'CrossFit Training',
+              'boxing': 'Boxing & Combat Training'
+            };
+            
+            const readableSpecialization = specializationMap[data.trainer.specialization] || data.trainer.specialization;
+            
             setTrainer({
-              id: trainerId,
               ...data.trainer,
-              rating: data.trainer.rating || 4.8 + Math.random() * 0.2,
-              reviewCount: data.trainer.reviewCount || Math.floor(Math.random() * 100) + 20,
-              hourlyRate: data.trainer.hourlyRate || `Rs. ${(2000 + Math.random() * 3000).toFixed(0)}/hour`,
-              location: data.trainer.location || 'Sri Lanka',
-              availableHours: data.trainer.availableHours || 'Mon-Fri: 6AM-9PM'
+              name: `${data.trainer.firstName} ${data.trainer.lastName}`,
+              specialization: readableSpecialization,
+              rating: data.trainer.rating || (4.5 + Math.random() * 0.4),
+              reviewCount: data.trainer.reviewCount || Math.floor(Math.random() * 80) + 20,
+              hourlyRate: data.trainer.hourlyRate || `Rs. ${(2500 + Math.random() * 2000).toFixed(0)}/hour`,
+              location: data.trainer.location || 'Colombo, Sri Lanka',
+              availableHours: data.trainer.availableHours || 'Mon-Fri: 6AM-9PM',
+              bio: data.trainer.bio || `Professional ${readableSpecialization.toLowerCase()} with ${data.trainer.experience} years of experience. Licensed trainer (#${data.trainer.licenseNumber}) committed to helping clients achieve their fitness goals.`,
+              certifications: data.trainer.certifications || ['Licensed Personal Trainer', 'Certified Fitness Professional'],
+              phone: data.trainer.phone || '+94 77 123 4567'
             });
           } else {
             console.log('API returned unsuccessful response:', data);
