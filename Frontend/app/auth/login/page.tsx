@@ -107,7 +107,7 @@ export default function Login() {
       <div className="relative z-10 max-w-7xl mx-auto pt-6">
         <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-start p-6 md:p-6" style={{ paddingTop: "60px" }}>
 
-          {/* Right Side - Professional Image Section (7 columns) */}
+          {/* Left Side - Professional Image Section (7 columns) */}
           <div className="md:col-span-7 order-2 md:order-1 rounded-lg overflow-hidden shadow-xl relative mt-8 md:mt-0">
             {/* Image slideshow with fade transition */}
             <div className="relative w-full" style={{ height: "650px" }}>
@@ -157,7 +157,7 @@ export default function Login() {
             </div>
           </div>
 
-          {/* Left Side - Login Form (5 columns) */}
+          {/* Right Side - Login Form (5 columns) */}
           <div className="md:col-span-5 order-1 md:order-2">
             <div className="space-y-6">
               {/* Header */}
