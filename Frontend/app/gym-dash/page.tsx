@@ -1,19 +1,35 @@
+"use client";
+
 import type React from "react";
 import Link from "next/link";
-import { Video, Calendar, ClipboardList } from "lucide-react";
+import { useSearchParams } from "next/navigation";
+import { Video, Calendar, ClipboardList, User } from "lucide-react";
+import { Suspense } from "react";
 
-export default function GymTrainerPage() {
+function GymDashContent() {
+  const searchParams = useSearchParams();
+  const trainerId = searchParams.get('trainerId');
+  const trainerName = searchParams.get('trainerName');
+
   return (
     <div className="bg-white min-h-screen flex items-center justify-center py-10">
-      <div className="flex flex-col min-h-screen bg-white text-black </di">
+      <div className="flex flex-col min-h-screen bg-white text-black">
         <div className="container mx-auto p-4 max-w-6xl bg-white text-black">
           <div className="flex items-center mb-8">
-            <Link href="/gym-doc-home" className="mr-4">
+            <Link href="/trainers" className="mr-4">
               <button className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors">
-                Back
+                Back to Trainers
               </button>
             </Link>
-            <h1 className="text-3xl font-bold">Gym Trainer Services</h1>
+            <div>
+              <h1 className="text-3xl font-bold">Gym Trainer Services</h1>
+              {trainerName && (
+                <div className="flex items-center mt-2 text-gray-600">
+                  <User className="h-4 w-4 mr-2" />
+                  <span>Selected Trainer: <strong>{decodeURIComponent(trainerName)}</strong></span>
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -23,16 +39,16 @@ export default function GymTrainerPage() {
               details="Join live video sessions with your fitness trainer for real-time guidance and feedback."
               icon={<Video className="h-10 w-10 text-sky-500" />}
               buttonText="Join Session"
-              href="/gym-dash/video-session"
+              href={`/gym-dash/video-session${trainerId ? `?trainerId=${trainerId}&trainerName=${encodeURIComponent(trainerName || '')}` : ''}`}
             />
 
             <ServiceCard
               title="Book Appointment"
               description="Schedule your training sessions"
-              details="Book appointments with available trainers based on your schedule and fitness goals."
+              details="Book appointments with your selected trainer based on your schedule and fitness goals."
               icon={<Calendar className="h-10 w-10 text-sky-500" />}
               buttonText="Book Now"
-              href="/gym-dash/book-appointment"
+              href={`/gym-dash/book-appointment${trainerId ? `?trainerId=${trainerId}&trainerName=${encodeURIComponent(trainerName || '')}` : ''}`}
             />
 
             <ServiceCard
@@ -41,12 +57,20 @@ export default function GymTrainerPage() {
               details="View, reschedule, or cancel your upcoming appointments with trainers."
               icon={<ClipboardList className="h-10 w-10 text-sky-500" />}
               buttonText="View Appointments"
-              href="/gym-dash/my-appointments"
+              href={`/gym-dash/my-appointments${trainerId ? `?trainerId=${trainerId}&trainerName=${encodeURIComponent(trainerName || '')}` : ''}`}
             />
           </div>
         </div>
       </div>
     </div>
+  );
+}
+
+export default function GymTrainerPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <GymDashContent />
+    </Suspense>
   );
 }
 

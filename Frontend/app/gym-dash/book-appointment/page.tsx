@@ -1,315 +1,567 @@
 "use client";
 
-import type React from "react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { bookAppointment } from "@/app//lib/actions";
-import { useToast } from "@/hooks/use-toast";
-import { CheckCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ArrowLeft, Clock, Calendar, ChevronLeft, ChevronRight } from "lucide-react";
+import { Suspense } from "react";
 
-export default function BookAppointmentPage() {
-  const { toast } = useToast();
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
-  const [submittedData, setSubmittedData] = useState({
-    name: "",
-    email: "",
-    date: "",
-    timeSlot: "",
-    trainer: "",
-    notes: "",
-  });
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    date: "",
-    timeSlot: "",
-    trainer: "",
-    notes: "",
-  });
+interface Trainer {
+  id: string;
+  firstName: string;
+  lastName: string;
+  name?: string;
+  email: string;
+  specialization: string;
+  experience: number;
+  hourlyRate?: string;
+}
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+function BookAppointmentContent() {
+  const searchParams = useSearchParams();
+  const trainerId = searchParams.get('trainerId');
+  const trainerName = searchParams.get('trainerName');
+  
+  const [trainer, setTrainer] = useState<Trainer | null>(null);
+  const [selectedDate, setSelectedDate] = useState<string>('');
+  const [selectedTime, setSelectedTime] = useState<string>('');
+  const [clientName, setClientName] = useState("");
+  const [clientEmail, setClientEmail] = useState("");
+  const [serviceType, setServiceType] = useState("Personal Training Session");
+  const [additionalNotes, setAdditionalNotes] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [currentSriLankaTime, setCurrentSriLankaTime] = useState<string>('');
+  
+  // Calendar navigation state
+  const now = new Date();
+  const sriLankaNow = new Date(now.toLocaleString("en-US", {timeZone: "Asia/Colombo"}));
+  const [currentMonth, setCurrentMonth] = useState<number>(sriLankaNow.getMonth());
+  const [currentYear, setCurrentYear] = useState<number>(sriLankaNow.getFullYear());
+
+  // Sri Lanka timezone constants
+  const TIMEZONE = 'Asia/Colombo';
+  
+  // Available time slots
+  const timeSlots = [
+    "06:00", "07:00", "08:00", "09:00", "10:00", "11:00",
+    "14:00", "15:00", "16:00", "17:00", "18:00", "19:00", "20:00"
+  ];
+
+  // Get current date in Sri Lanka timezone
+  const getSriLankaDate = () => {
+    const now = new Date();
+    const sriLankaDate = new Date(now.toLocaleString("en-US", {timeZone: TIMEZONE}));
+    return sriLankaDate.toLocaleDateString("en-CA");
   };
 
-  const handleSelectChange = (name: string, value: string) => {
-    setFormData((prev) => ({ ...prev, [name]: value }));
+  // Get current time in Sri Lanka timezone
+  const getSriLankaTime = () => {
+    const now = new Date();
+    return now.toLocaleTimeString("en-GB", {
+      timeZone: TIMEZONE,
+      hour12: false, 
+      hour: '2-digit', 
+      minute: '2-digit'
+    });
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
+  // Get current day info in Sri Lanka timezone
+  const getSriLankaDayInfo = () => {
+    const now = new Date();
+    const sriLankaDate = new Date(now.toLocaleString("en-US", {timeZone: TIMEZONE}));
+    return {
+      date: sriLankaDate.toLocaleDateString("en-CA"),
+      dayOfWeek: sriLankaDate.getDay(),
+      dayName: sriLankaDate.toLocaleDateString("en-US", {timeZone: TIMEZONE, weekday: 'long'})
+    };
+  };
+
+  // Check if time slot is in the past
+  const isTimeSlotPast = (timeSlot: string) => {
+    if (selectedDate !== getSriLankaDate()) return false;
+    const currentTime = getSriLankaTime();
+    return timeSlot <= currentTime;
+  };
+
+  // Generate calendar dates for the selected month/year
+  const generateCalendarDates = () => {
+    const calendarData = [];
+    
+    // First day of the selected month
+    const firstDayOfMonth = new Date(currentYear, currentMonth, 1);
+    const lastDayOfMonth = new Date(currentYear, currentMonth + 1, 0);
+    
+    // Get the day of week for the first day (0 = Sunday)
+    const startDay = firstDayOfMonth.getDay();
+    
+    // Add empty cells for days before the first day of month
+    for (let i = 0; i < startDay; i++) {
+      const prevDate = new Date(firstDayOfMonth);
+      prevDate.setDate(prevDate.getDate() - (startDay - i));
+      calendarData.push(prevDate);
+    }
+    
+    // Add all days of the current month
+    for (let day = 1; day <= lastDayOfMonth.getDate(); day++) {
+      const date = new Date(currentYear, currentMonth, day);
+      calendarData.push(date);
+    }
+    
+    // Add days from next month to complete the grid (42 total cells)
+    const remainingCells = 42 - calendarData.length;
+    for (let i = 1; i <= remainingCells; i++) {
+      const nextDate = new Date(currentYear, currentMonth + 1, i);
+      calendarData.push(nextDate);
+    }
+    
+    return calendarData;
+  };
+
+  // Navigate to previous month
+  const goToPreviousMonth = () => {
+    if (currentMonth === 0) {
+      setCurrentMonth(11);
+      setCurrentYear(currentYear - 1);
+    } else {
+      setCurrentMonth(currentMonth - 1);
+    }
+  };
+
+  // Navigate to next month
+  const goToNextMonth = () => {
+    if (currentMonth === 11) {
+      setCurrentMonth(0);
+      setCurrentYear(currentYear + 1);
+    } else {
+      setCurrentMonth(currentMonth + 1);
+    }
+  };
+
+  // Get month name
+  const getMonthName = (monthIndex: number) => {
+    const monthNames = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    return monthNames[monthIndex];
+  };
+
+  // Check if we can go to previous month (prevent going to past months)
+  const canGoToPrevious = () => {
+    const currentSriLankaDate = new Date(now.toLocaleString("en-US", {timeZone: TIMEZONE}));
+    const currentSriLankaMonth = currentSriLankaDate.getMonth();
+    const currentSriLankaYear = currentSriLankaDate.getFullYear();
+    
+    if (currentYear > currentSriLankaYear) return true;
+    if (currentYear === currentSriLankaYear) return currentMonth >= currentSriLankaMonth;
+    return false;
+  };
+
+  // Update current time every minute
+  useEffect(() => {
+    const updateTime = () => {
+      const now = new Date();
+      const timeString = now.toLocaleString("en-US", {
+        timeZone: TIMEZONE,
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      });
+      setCurrentSriLankaTime(timeString);
+    };
+
+    updateTime();
+    const interval = setInterval(updateTime, 60000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Fetch trainer details and auto-fill user data
+  useEffect(() => {
+    const fetchTrainer = async () => {
+      if (!trainerId) return;
+      
+      try {
+        console.log('Fetching trainer details for ID:', trainerId);
+        const response = await fetch(`/api/trainers/get-trainer/${trainerId}`);
+        const data = await response.json();
+        
+        console.log('Trainer API response:', data);
+        
+        if (response.ok && data.success) {
+          setTrainer(data.trainer);
+          console.log('Trainer details loaded:', data.trainer);
+        } else {
+          console.log('Trainer not found, proceeding without trainer details');
+          // Don't set any trainer data - just proceed without it
+          setTrainer(null);
+        }
+      } catch (error) {
+        console.error('Error fetching trainer (non-critical):', error);
+        // Don't create fallback data - just proceed without trainer
+        setTrainer(null);
+      }
+    };
+
+    // Auto-fill user data if available
+    const savedUserName = localStorage.getItem('userName');
+    const savedUserEmail = localStorage.getItem('userEmail');
+    
+    if (savedUserName) setClientName(savedUserName);
+    if (savedUserEmail) setClientEmail(savedUserEmail);
+
+    fetchTrainer();
+  }, [trainerId, trainerName]);
+
+  // Handle booking submission
+  const handleBooking = async () => {
+    if (!selectedDate || !selectedTime || !clientName || !clientEmail) {
+      setError('Please fill in all required fields and select date/time');
+      return;
+    }
+
+    if (!trainerId) {
+      setError('No trainer selected');
+      return;
+    }
+
+    if (isTimeSlotPast(selectedTime)) {
+      setError('Selected time slot is in the past. Please choose a future time.');
+      return;
+    }
 
     try {
-      await bookAppointment(formData);
-
-      // Save the submitted data before resetting the form
-      setSubmittedData({ ...formData });
-
-      // Show toast notification
-      toast({
-        title: "Appointment Requested",
-        description:
-          "Your appointment request has been submitted successfully.",
+      setLoading(true);
+      setError(null);
+      
+      const userId = localStorage.getItem('userId') || `user_${Date.now()}`;
+      
+      const response = await fetch(`/api/trainers/bookings/${trainerId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          clientName,
+          clientEmail,
+          date: selectedDate,
+          time: selectedTime,
+          userId: userId,
+          trainerName: trainerName ? decodeURIComponent(trainerName) : 'Selected Trainer',
+          serviceType,
+          notes: additionalNotes
+        }),
       });
 
-      // Show success dialog
-      setShowSuccessDialog(true);
+      const data = await response.json();
 
-      // Reset form
-      setFormData({
-        name: "",
-        email: "",
-        date: "",
-        timeSlot: "",
-        trainer: "",
-        notes: "",
-      });
+      if (data.success) {
+        localStorage.setItem('userId', userId);
+        localStorage.setItem('userName', clientName);
+        localStorage.setItem('userEmail', clientEmail);
+        
+        setSuccess('Appointment booked successfully! The trainer will contact you soon.');
+        setSelectedDate('');
+        setSelectedTime('');
+        setAdditionalNotes('');
+      } else {
+        setError(data.message || 'Failed to book appointment');
+      }
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "There was an error submitting your appointment request.",
-        variant: "destructive",
-      });
+      console.error('Error booking appointment:', error);
+      setError('Failed to book appointment. Please try again.');
     } finally {
-      setIsSubmitting(false);
+      setLoading(false);
     }
   };
 
   return (
-    <div className="bg-white min-h-screen flex items-center justify-center py-10">
-      <div className="container mx-auto p-4 max-w-4xl bg-white text-black">
+    <div className="min-h-screen bg-gray-50 py-8">
+      <div className="max-w-6xl mx-auto px-4">
+        {/* Header */}
         <div className="flex items-center mb-8">
-          <Link href="/gym-doc-home" className="mr-4">
-            <button className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors">
-              Back
-            </button>
+          <Link href={`/gym-dash${trainerId ? `?trainerId=${trainerId}&trainerName=${encodeURIComponent(trainerName || '')}` : ''}`} className="mr-4">
+            <Button variant="outline">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Services
+            </Button>
           </Link>
-          <h1 className="text-3xl font-bold">Book an Appointment</h1>
-        </div>
-
-        <div className="bg-white rounded-lg shadow-lg overflow-hidden">
-          <div className="p-6 border-b border-gray-200">
-            <h2 className="text-2xl font-bold">
-              Schedule a Gym trainer session
-            </h2>
-            <p className="text-gray-600">
-              Fill out the form below to request an appointment with one of our
-              doctors.
-            </p>
-          </div>
-          <div className="p-6">
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <label
-                    htmlFor="name"
-                    className="block text-sm font-medium text-gray-700"
-                  >
-                    Name
-                  </label>
-                  <input
-                    id="name"
-                    name="name"
-                    placeholder="Your full name"
-                    value={formData.name}
-                    onChange={handleChange}
-                    required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label
-                    htmlFor="email"
-                    className="block text-sm font-medium text-gray-700"
-                  >
-                    Email
-                  </label>
-                  <input
-                    id="email"
-                    name="email"
-                    type="email"
-                    placeholder="your.email@example.com"
-                    value={formData.email}
-                    onChange={handleChange}
-                    required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <label
-                    htmlFor="date"
-                    className="block text-sm font-medium text-gray-700"
-                  >
-                    Date
-                  </label>
-                  <input
-                    id="date"
-                    name="date"
-                    type="date"
-                    value={formData.date}
-                    onChange={handleChange}
-                    required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label
-                    htmlFor="timeSlot"
-                    className="block text-sm font-medium text-gray-700"
-                  >
-                    Time Slot
-                  </label>
-                  <select
-                    id="timeSlot"
-                    name="timeSlot"
-                    value={formData.timeSlot}
-                    onChange={(e) =>
-                      handleSelectChange("timeSlot", e.target.value)
-                    }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500"
-                  >
-                    <option value="">Select a time slot</option>
-                    <option value="09:00">9:00 AM</option>
-                    <option value="10:00">10:00 AM</option>
-                    <option value="11:00">11:00 AM</option>
-                    <option value="13:00">1:00 PM</option>
-                    <option value="14:00">2:00 PM</option>
-                    <option value="15:00">3:00 PM</option>
-                    <option value="16:00">4:00 PM</option>
-                    <option value="17:00">5:00 PM</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <label
-                  htmlFor="trainer"
-                  className="block text-sm font-medium text-gray-700"
-                >
-                  Trainer
-                </label>
-                <select
-                  id="trainer"
-                  name="trainer"
-                  value={formData.trainer}
-                  onChange={(e) =>
-                    handleSelectChange("trainer", e.target.value)
-                  }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500"
-                >
-                  <option value="">Select a trainer</option>
-                  <option value="john-smith">John Smith</option>
-                  <option value="sarah-johnson">Sarah Johnson</option>
-                  <option value="michael-lee">Michael Lee</option>
-                  <option value="emma-wilson">Emma Wilson</option>
-                </select>
-              </div>
-
-              <div className="space-y-2">
-                <label
-                  htmlFor="notes"
-                  className="block text-sm font-medium text-gray-700"
-                >
-                  Additional Notes
-                </label>
-                <textarea
-                  id="notes"
-                  name="notes"
-                  placeholder="Tell us about your fitness goals or any specific requirements"
-                  value={formData.notes}
-                  onChange={handleChange}
-                  rows={4}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500"
-                />
-                <p className="text-sm text-gray-500">
-                  This information helps the trainer prepare for your session.
-                </p>
-              </div>
-
-              <button
-                type="submit"
-                className="w-full px-4 py-2 bg-sky-500 text-white rounded-3xl hover:bg-sky-700 transition-colors disabled:opacity-50"
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? "Submitting..." : "Request Appointment"}
-              </button>
-            </form>
-          </div>
-          <div className="p-6 border-t border-gray-200 text-center text-sm text-gray-500">
-            <p>
-              Your appointment request will be reviewed by the trainer, and
-              you&apos;ll receive a confirmation email once approved.
-            </p>
-          </div>
-        </div>
-
-        {/* Success Dialog */}
-        {showSuccessDialog && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 max-w-md w-full">
-              <div className="flex items-center gap-2 mb-4">
-                <CheckCircle className="h-6 w-6 text-green-500" />
-                <h2 className="text-xl font-bold">
-                  Appointment Booked Successfully
-                </h2>
-              </div>
-              <p className="text-gray-600 mb-4">
-                Your appointment request has been submitted and is pending
-                approval from the trainer.
+          <div>
+            <h1 className="text-3xl font-bold">Book Appointment</h1>
+            {trainerName && (
+              <p className="text-gray-600 mt-2">
+                With: <strong>{decodeURIComponent(trainerName)}</strong>
               </p>
-              <div className="grid gap-4 mb-6">
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <p className="text-right font-medium col-span-1">Name:</p>
-                  <p className="col-span-3">
-                    {submittedData.name || "Not provided"}
-                  </p>
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <p className="text-right font-medium col-span-1">Date:</p>
-                  <p className="col-span-3">
-                    {submittedData.date || "Not provided"}
-                  </p>
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <p className="text-right font-medium col-span-1">Time:</p>
-                  <p className="col-span-3">
-                    {submittedData.timeSlot || "Not provided"}
-                  </p>
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <p className="text-right font-medium col-span-1">Trainer:</p>
-                  <p className="col-span-3">
-                    {submittedData.trainer
-                      ? submittedData.trainer
-                          .split("-")
-                          .map(
-                            (word) =>
-                              word.charAt(0).toUpperCase() + word.slice(1)
-                          )
-                          .join(" ")
-                      : "Not provided"}
-                  </p>
-                </div>
-              </div>
-              <div className="flex justify-center">
-                <button
-                  className="px-4 py-2 bg-sky-500 text-white rounded-lg hover:bg-sky-700 transition-colors"
-                  onClick={() => setShowSuccessDialog(false)}
-                >
-                  View My Appointments
-                </button>
-              </div>
+            )}
+            <div className="flex items-center text-sm text-gray-500 mt-2">
+              <Clock className="h-4 w-4 mr-2" />
+              Current time in Sri Lanka: <strong className="ml-1">{currentSriLankaTime}</strong> (GMT+5:30)
+            </div>
+            <div className="text-xs text-blue-600 mt-1">
+              Today is {getSriLankaDayInfo().dayName} in Sri Lanka
             </div>
           </div>
+        </div>
+
+        {success && (
+          <Card className="mb-6 border-green-200 bg-green-50">
+            <CardContent className="pt-6">
+              <p className="text-green-700 text-center">{success}</p>
+            </CardContent>
+          </Card>
         )}
+
+        {error && (
+          <Card className="mb-6 border-red-200 bg-red-50">
+            <CardContent className="pt-6">
+              <p className="text-red-700 text-center">{error}</p>
+            </CardContent>
+          </Card>
+        )}
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Calendar Section */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <Calendar className="h-5 w-5 mr-2" />
+                  <CardTitle>Select Date</CardTitle>
+                </div>
+                {/* Month/Year Navigation */}
+                <div className="flex items-center space-x-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={goToPreviousMonth}
+                    disabled={!canGoToPrevious()}
+                    className="p-1 h-8 w-8"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <div className="text-sm font-medium min-w-[120px] text-center">
+                    {getMonthName(currentMonth)} {currentYear}
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={goToNextMonth}
+                    className="p-1 h-8 w-8"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+              <p className="text-sm text-gray-500">
+                Choose your preferred appointment date (Sri Lanka timezone)
+              </p>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-7 gap-2">
+                {/* Day headers */}
+                {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+                  <div key={day} className="p-2 text-center text-sm font-medium text-gray-500">
+                    {day}
+                  </div>
+                ))}
+                
+                {/* Calendar dates */}
+                {generateCalendarDates().map((date, index) => {
+                  const dateString = date.toLocaleDateString("en-CA");
+                  const isSelected = selectedDate === dateString;
+                  const sriLankaToday = getSriLankaDate();
+                  const isPast = dateString < sriLankaToday;
+                  const isToday = dateString === sriLankaToday;
+                  const isCurrentMonth = date.getMonth() === currentMonth;
+                  
+                  return (
+                    <button
+                      key={index}
+                      onClick={() => !isPast && isCurrentMonth && setSelectedDate(dateString)}
+                      disabled={isPast || !isCurrentMonth}
+                      className={`p-2 text-sm border rounded-lg transition-colors ${
+                        isPast || !isCurrentMonth
+                          ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                          : isSelected
+                            ? 'bg-cyan-600 text-white border-cyan-600'
+                            : isToday
+                              ? 'bg-cyan-50 text-cyan-700 border-cyan-200 font-semibold'
+                              : 'bg-white hover:bg-gray-50 border-gray-200'
+                      }`}
+                      title={isToday ? `Today (${getSriLankaDayInfo().dayName})` : ''}
+                    >
+                      {date.getDate()}
+                      {isToday && <div className="text-xs text-cyan-600">Today</div>}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="text-xs text-gray-500 mt-3 text-center">
+                Navigate months using arrow buttons - Past dates are disabled
+              </p>
+            </CardContent>
+          </Card>
+
+          {/* Time Selection and Form */}
+          <div className="space-y-6">
+            {/* Time Slots */}
+            {selectedDate && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <Clock className="h-5 w-5 mr-2" />
+                    Available Times
+                  </CardTitle>
+                  <p className="text-sm text-gray-500">
+                    {selectedDate === getSriLankaDate() ? 'Today\'s' : 'Available'} time slots
+                  </p>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-3 gap-2">
+                    {timeSlots.map(time => {
+                      const isPast = isTimeSlotPast(time);
+                      const isSelected = selectedTime === time;
+                      
+                      return (
+                        <button
+                          key={time}
+                          onClick={() => !isPast && setSelectedTime(time)}
+                          disabled={isPast}
+                          className={`p-3 text-sm border rounded-lg transition-colors ${
+                            isPast
+                              ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                              : isSelected
+                                ? 'bg-cyan-600 text-white border-cyan-600'
+                                : 'bg-white hover:bg-gray-50 border-gray-200'
+                          }`}
+                        >
+                          {time}
+                          {isPast && <div className="text-xs">Past</div>}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className="text-xs text-gray-500 mt-3 text-center">
+                    All times in Sri Lanka timezone (GMT+5:30)
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Booking Form */}
+            {selectedDate && selectedTime && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Booking Details</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Full Name *</label>
+                    <input
+                      type="text"
+                      value={clientName}
+                      onChange={(e) => setClientName(e.target.value)}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                      placeholder="Enter your full name"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Email Address *</label>
+                    <input
+                      type="email"
+                      value={clientEmail}
+                      onChange={(e) => setClientEmail(e.target.value)}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                      placeholder="Enter your email address"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Service Type</label>
+                    <select 
+                      value={serviceType}
+                      onChange={(e) => setServiceType(e.target.value)}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                    >
+                      <option value="Personal Training Session">Personal Training Session</option>
+                      <option value="Consultation Only">Consultation Only</option>
+                      <option value="Fitness Assessment">Fitness Assessment</option>
+                      <option value="Nutrition Consultation">Nutrition Consultation</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Additional Notes</label>
+                    <textarea
+                      rows={3}
+                      value={additionalNotes}
+                      onChange={(e) => setAdditionalNotes(e.target.value)}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 resize-none"
+                      placeholder="Any specific requirements..."
+                    />
+                  </div>
+
+                  {/* Booking Summary */}
+                  <div className="bg-gray-50 p-4 rounded-lg border">
+                    <h4 className="font-medium text-gray-800 mb-3">Booking Summary</h4>
+                    <div className="text-sm text-gray-600 space-y-2">
+                      <div className="flex justify-between">
+                        <span>Trainer:</span>
+                        <span className="font-medium">{trainerName ? decodeURIComponent(trainerName) : 'Selected trainer'}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Date:</span>
+                        <span className="font-medium">{new Date(selectedDate).toLocaleDateString()}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Time:</span>
+                        <span className="font-medium">{selectedTime} (Sri Lanka)</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Service:</span>
+                        <span className="font-medium">{serviceType}</span>
+                      </div>
+                      {trainer?.hourlyRate && (
+                        <div className="flex justify-between">
+                          <span>Rate:</span>
+                          <span className="font-medium text-cyan-600">{trainer.hourlyRate}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <Button 
+                    onClick={handleBooking}
+                    disabled={loading || !clientName || !clientEmail}
+                    className="w-full bg-cyan-600 hover:bg-cyan-700 text-white py-3 text-lg font-medium"
+                  >
+                    {loading ? (
+                      <div className="flex items-center justify-center">
+                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                        Booking...
+                      </div>
+                    ) : (
+                      'Confirm Booking'
+                    )}
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </div>
       </div>
     </div>
+  );
+}
+
+export default function BookAppointmentPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen">Loading...</div>}>
+      <BookAppointmentContent />
+    </Suspense>
   );
 }
