@@ -94,9 +94,11 @@ export default function Navbar() {
                   Trainer Dashboard
                 </Link>
               )}
-              <Link href="/profile" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors" onClick={() => setUserMenuOpen(false)}>
-                My Profile
-              </Link>
+              {currentUser.role === 'user' && (
+                <Link href="/user-profile" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors" onClick={() => setUserMenuOpen(false)}>
+                  My Profile
+                </Link>
+              )}
               <button onClick={handleLogout} className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors flex items-center space-x-2">
                 <LogOut className="h-4 w-4" />
                 <span>Logout</span>
@@ -209,7 +211,7 @@ export default function Navbar() {
                   Trainer Dashboard
                 </Link>
               )}
-              <Link href="/profile" className="block px-2 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors" onClick={closeMobileMenu}>
+              <Link href="/user-profile" className="block px-2 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors" onClick={closeMobileMenu}>
                 My Profile
               </Link>
               <button onClick={handleLogout} className="w-full text-left px-2 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors flex items-center space-x-2">
@@ -243,7 +245,7 @@ export default function Navbar() {
               Trainer Dashboard
             </Link>
           )}
-          <Link href="/profile" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors" onClick={() => setUserMenuOpen(false)}>
+          <Link href="/user-profile" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors" onClick={() => setUserMenuOpen(false)}>
             My Profile
           </Link>
           <button onClick={handleLogout} className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors flex items-center space-x-2">
