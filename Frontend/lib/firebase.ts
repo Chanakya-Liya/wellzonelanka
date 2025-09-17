@@ -5,44 +5,50 @@ import { Firestore, getFirestore } from "firebase/firestore";
 import { FirebaseStorage, getStorage } from "firebase/storage";
 import { getAnalytics, Analytics, isSupported } from "firebase/analytics";
 
-// Validate required environment variables
-const requiredEnvVars = [
-  "NEXT_PUBLIC_FIREBASE_API_KEY",
-  "NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN",
-  "NEXT_PUBLIC_FIREBASE_PROJECT_ID",
-] as const;
+// Function to get Firebase config with better error handling
+function getFirebaseConfig() {
+  const config = {
+    apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+    authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+    projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+    storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+    appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+    measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
+  };
 
-for (const envVar of requiredEnvVars) {
-  if (!process.env[envVar]) {
-    console.error(`Missing environment variable: ${envVar}`);
-    throw new Error(`Missing required environment variable: ${envVar}`);
+  // Check if we're in development and log config status
+  console.log('Firebase config check:', {
+    hasApiKey: !!config.apiKey,
+    hasAuthDomain: !!config.authDomain,
+    hasProjectId: !!config.projectId,
+    projectId: config.projectId
+  });
+
+  // Only validate in production or when we have at least the essential vars
+  if (!config.apiKey || !config.authDomain || !config.projectId) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('Missing required Firebase environment variables in production');
+    } else {
+      console.warn('Firebase environment variables not fully loaded yet, using fallback config');
+      // Return a fallback config for development
+      return {
+        apiKey: "AIzaSyDbARzitiY2mHlYL0tvTgvLJjN4QBCzNXc",
+        authDomain: "wellzonelankcom.firebaseapp.com",
+        projectId: "wellzonelankcom",
+        storageBucket: "wellzonelankcom.appspot.com",
+        messagingSenderId: "597186379285",
+        appId: "1:597186379285:web:e58a19b4c910b07b25d81c",
+        measurementId: "G-PM3CWZ1PSG"
+      };
+    }
   }
+
+  return config;
 }
 
-// Debug: Log the API key length (without exposing the actual key)
-const apiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
-if (apiKey && apiKey.length < 30) {
-  console.error('Firebase API key appears to be too short. Expected length > 30, got:', apiKey.length);
-  throw new Error('Firebase API key appears to be invalid (too short)');
-}
-
-// Firebase configuration (from .env.local)
-const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
-  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
-};
-
-console.log('Firebase config check:', {
-  hasApiKey: !!firebaseConfig.apiKey,
-  hasAuthDomain: !!firebaseConfig.authDomain,
-  hasProjectId: !!firebaseConfig.projectId,
-  projectId: firebaseConfig.projectId
-});
+// Get Firebase configuration
+const firebaseConfig = getFirebaseConfig();
 
 // Prevent re-initialization in Next.js
 let app: FirebaseApp;

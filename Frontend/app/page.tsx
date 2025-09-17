@@ -14,12 +14,13 @@ import {
   ArrowRight,
   Dumbbell,
   Calendar,
+  X,
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import Navbar from "@/components/Navbar";
 import { Footer } from "./Footer";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
   IoIosFlash,
   IoIosFitness,
@@ -29,6 +30,44 @@ import {
 import Sidebar from "./Sidebar";
 
 export default function Home() {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [showPopup, setShowPopup] = useState(false);
+  const [currentUser, setCurrentUser] = useState<{
+    firstName?: string;
+    lastName?: string;
+    email?: string;
+    role?: string;
+  } | null>(null);
+
+  // Check if user is logged in
+  useEffect(() => {
+    const user = localStorage.getItem('currentUser');
+    if (user) {
+      try {
+        const userData = JSON.parse(user);
+        setCurrentUser(userData);
+        setIsLoggedIn(true);
+      } catch (error) {
+        console.error('Error parsing user data:', error);
+        localStorage.removeItem('currentUser');
+        setIsLoggedIn(false);
+      }
+    }
+  }, []);
+
+  // Function to handle Join Us button click
+  const handleJoinUsClick = () => {
+    if (isLoggedIn) {
+      setShowPopup(true);
+    } else {
+      window.location.href = "/auth/register";
+    }
+  };
+
+  // Function to close popup
+  const closePopup = () => {
+    setShowPopup(false);
+  };
   // Function to handle scroll animations
   useEffect(() => {
     const observerOptions = {
@@ -110,11 +149,12 @@ export default function Home() {
               className="flex space-x-4 animate-fade-in opacity-0"
               style={{ animationDelay: "0.8s" }}
             >
-              <Link href="/auth/register">
-                <button className="rounded-full bg-cyan-500 text-white px-8 py-4 text-lg font-semibold hover:bg-cyan-600 transition-colors">
-                  Get Started
-                </button>
-              </Link>
+              <button 
+                onClick={handleJoinUsClick}
+                className="rounded-full bg-cyan-500 text-white px-8 py-4 text-lg font-semibold hover:bg-cyan-600 transition-colors"
+              >
+                Get Started
+              </button>
 
               <Link href="/about">
                 <button className="rounded-full bg-transparent border-2 border-white text-white px-8 py-4 text-lg font-semibold hover:bg-white hover:text-black transition-colors">
@@ -607,7 +647,7 @@ export default function Home() {
 
             <button
               className="group relative overflow-hidden rounded-full bg-gradient-to-r from-blue-500  border-2 border-white text-white px-8 py-4 text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-300"
-              onClick={() => (window.location.href = "/auth/register")}
+              onClick={handleJoinUsClick}
             >
               <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-cyan-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
               <span className="flex items-center justify-center relative z-10">
@@ -617,6 +657,70 @@ export default function Home() {
           </div>
         </div>
       </div>
+
+      {/* Popup Modal for Already Logged In Users */}
+      {showPopup && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-2xl p-8 max-w-md mx-4 relative">
+            <button
+              onClick={closePopup}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <X className="w-6 h-6" />
+            </button>
+            
+            <div className="text-center">
+              <div className="w-16 h-16 bg-cyan-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <CheckCircle className="w-8 h-8 text-cyan-600" />
+              </div>
+              
+              <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                You're Already Logged In!
+              </h3>
+              
+              <p className="text-gray-600 mb-6">
+                Welcome back, {currentUser?.firstName || 'User'}! You're already part of the WellZone Lanka community.
+              </p>
+              
+              <div className="space-y-3">
+                {currentUser?.role === 'doctor' && (
+                  <button
+                    onClick={() => window.location.href = '/doctor-dashboard'}
+                    className="w-full px-6 py-3 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 transition-colors font-semibold"
+                  >
+                    Go to Doctor Dashboard
+                  </button>
+                )}
+                
+                {currentUser?.role === 'trainer' && (
+                  <button
+                    onClick={() => window.location.href = '/trainer-dashboard'}
+                    className="w-full px-6 py-3 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 transition-colors font-semibold"
+                  >
+                    Go to Trainer Dashboard
+                  </button>
+                )}
+                
+                {currentUser?.role === 'user' && (
+                  <button
+                    onClick={() => window.location.href = '/user-profile'}
+                    className="w-full px-6 py-3 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 transition-colors font-semibold"
+                  >
+                    Go to My Profile
+                  </button>
+                )}
+                
+                <button
+                  onClick={closePopup}
+                  className="w-full px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Continue Browsing
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <Footer />
 
