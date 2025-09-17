@@ -63,7 +63,7 @@ export default function Home() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-            <Card className="hover:shadow-lg transition-shadow duration-300">
+            <Card className="hover:shadow-2xl transition-shadow duration-300">
               <CardContent className="pt-6">
                 <div className="flex flex-col items-center text-center">
                   <div className="p-3 rounded-full bg-blue-100 mb-4">
@@ -82,7 +82,7 @@ export default function Home() {
               </CardContent>
             </Card>
 
-            <Card className="hover:shadow-lg transition-shadow duration-300">
+            <Card className="hover:shadow-2xl transition-shadow duration-300">
               <CardContent className="pt-6">
                 <div className="flex flex-col items-center text-center">
                   <div className="p-3 rounded-full bg-green-100 mb-4">
@@ -101,7 +101,7 @@ export default function Home() {
               </CardContent>
             </Card>
 
-            <Card className="hover:shadow-lg transition-shadow duration-300">
+            <Card className="hover:shadow-2xl transition-shadow duration-300">
               <CardContent className="pt-6">
                 <div className="flex flex-col items-center text-center">
                   <div className="p-3 rounded-full bg-orange-100 mb-4">
@@ -186,14 +186,14 @@ export default function Home() {
               Join WellZone Lanka today and experience the future of home fitness with professional guidance.
             </p>
             <div className="mt-8 flex flex-wrap justify-center gap-4">
-              <Button asChild size="lg" className="bg-blue-600 hover:bg-blue-700 text-white rounded-3xl font-bold transition-colors">
+              <Button asChild size="lg" className="hover:shadow-lg text-black rounded-3xl font-bold transition-transform duration-500 hover:scale-105">
                 <Link href="/gym-doc-home">Get Started</Link>
               </Button>
               <Button
                 asChild
                 variant="outline"
                 size="lg"
-                className="bg-sky-500 hover:bg-sky-600 text-white rounded-3xl font-bold transition-colors"
+                className="bg-sky-500 hover:bg-sky-600 text-white rounded-3xl font-bold transition-transform duration-500 hover:scale-105"
               >
                 <Link href="/contact">Contact Us</Link>
               </Button>
@@ -201,7 +201,7 @@ export default function Home() {
           </div>
         </div>
       </section>
-
+      
       <Footer />
     </div>
   );
