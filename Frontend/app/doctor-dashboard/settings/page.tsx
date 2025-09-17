@@ -15,45 +15,115 @@ import {
   Save,
   X
 } from "lucide-react";
+import { 
+  getDoctorProfile,
+  submitDoctorProfileChanges,
+  getDoctorPendingChanges
+} from "../../../lib/services/appointmentService";
 
 export default function DoctorSettings() {
   const [doctorName, setDoctorName] = useState("Test Doctor");
   const [doctorEmail, setDoctorEmail] = useState("doctor@gmail.com");
+  const [doctorId, setDoctorId] = useState("");
   const [activeTab, setActiveTab] = useState('profile');
   const [isEditing, setIsEditing] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [pendingChanges, setPendingChanges] = useState<any[]>([]);
   const [formData, setFormData] = useState({
-    fullName: "Dr. Sarah Johnson",
-    email: "sarah.johnson@wellzone.com",
-    phone: "+1 (555) 123-4567",
-    licenseNumber: "MD12345678",
-    specialization: "Internal Medicine",
-    experience: "10",
-    bio: "Experienced internal medicine physician with a focus on preventive care and chronic disease management. Dedicated to providing comprehensive healthcare with a patient-centered approach.",
-    address: "123 Medical Center Drive, Suite 200\nHealthcare District, NY 10001",
-    education: "MD - Harvard Medical School (2014)\nResidency - Johns Hopkins Hospital (2014-2017)\nFellowship - Mayo Clinic (2017-2018)",
-    certifications: "Board Certified - Internal Medicine\nAdvanced Cardiac Life Support (ACLS)\nBasic Life Support (BLS)\nCertified in Diabetes Care and Education"
+    fullName: "",
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    licenseNumber: "",
+    specialization: "",
+    experience: "",
+    bio: "",
+    address: "",
+    education: "",
+    certifications: ""
   });
 
   useEffect(() => {
-    // Get doctor data from localStorage if available
-    const currentUser = localStorage.getItem('currentUser');
-    if (currentUser) {
-      const userData = JSON.parse(currentUser);
-      if (userData.firstName && userData.lastName) {
-        setDoctorName(`${userData.firstName} ${userData.lastName}`);
-        setFormData(prev => ({
-          ...prev,
-          fullName: `Dr. ${userData.firstName} ${userData.lastName}`
-        }));
+    const initializeDoctorData = async () => {
+      try {
+        setLoading(true);
+        
+        // Get doctor data from localStorage or simulate login
+        const currentUser = localStorage.getItem('currentUser');
+        let userId = '';
+        
+        if (currentUser) {
+          const userData = JSON.parse(currentUser);
+          userId = userData.id;
+          setDoctorId(userId);
+          if (userData.firstName && userData.lastName) {
+            setDoctorName(`${userData.firstName} ${userData.lastName}`);
+          }
+          if (userData.email) {
+            setDoctorEmail(userData.email);
+          }
+        } else {
+          // Simulate doctor login for testing
+          console.log('🧪 No user in localStorage, simulating doctor login...');
+          const testDoctorId = 'eNRqpc8os8MBgoBe9vKi';
+          const testDoctorData = {
+            id: testDoctorId,
+            firstName: 'Test',
+            lastName: 'Doctor',
+            email: 'doctor@gmail.com'
+          };
+          
+          localStorage.setItem('currentUser', JSON.stringify(testDoctorData));
+          setDoctorId(testDoctorId);
+          setDoctorName('Test Doctor');
+          setDoctorEmail('doctor@gmail.com');
+          userId = testDoctorId;
+        }
+
+        // Fetch doctor profile from Firebase
+        if (userId) {
+          console.log('🔍 Fetching doctor profile for ID:', userId);
+          const doctorProfile = await getDoctorProfile(userId);
+          
+          if (doctorProfile) {
+            console.log('👨‍⚕️ Doctor profile loaded:', doctorProfile);
+            setFormData({
+              fullName: doctorProfile.fullName || `Dr. ${doctorProfile.firstName} ${doctorProfile.lastName}`,
+              firstName: doctorProfile.firstName || "",
+              lastName: doctorProfile.lastName || "",
+              email: doctorProfile.email || "",
+              phone: doctorProfile.phone || "",
+              licenseNumber: doctorProfile.licenseNumber || "",
+              specialization: doctorProfile.specialization || "",
+              experience: doctorProfile.experience || "",
+              bio: doctorProfile.bio || "",
+              address: doctorProfile.address || "",
+              education: doctorProfile.education || "",
+              certifications: doctorProfile.certifications || ""
+            });
+            
+            // Update displayed name and email
+            setDoctorName(doctorProfile.fullName || `${doctorProfile.firstName} ${doctorProfile.lastName}`);
+            setDoctorEmail(doctorProfile.email || "");
+          } else {
+            console.log('❌ Doctor profile not found, keeping empty fields');
+          }
+
+          // Fetch pending changes
+          const pendingChangesData = await getDoctorPendingChanges(userId);
+          setPendingChanges(pendingChangesData);
+          console.log('📋 Pending changes loaded:', pendingChangesData.length);
+        }
+      } catch (error) {
+        console.error('Error initializing doctor data:', error);
+      } finally {
+        setLoading(false);
       }
-      if (userData.email) {
-        setDoctorEmail(userData.email);
-        setFormData(prev => ({
-          ...prev,
-          email: userData.email
-        }));
-      }
-    }
+    };
+
+    initializeDoctorData();
   }, []);
 
   const handleLogout = () => {
@@ -61,11 +131,35 @@ export default function DoctorSettings() {
     window.location.href = '/auth/login';
   };
 
-  const handleSave = () => {
-    // Save form data logic here
-    console.log('Saving form data:', formData);
-    setIsEditing(false);
-    // You can add API call here to save to database
+  const handleSave = async () => {
+    try {
+      setSaving(true);
+      console.log('💾 Submitting profile changes for approval:', formData);
+      
+      if (!doctorId) {
+        console.error('❌ No doctor ID available');
+        return;
+      }
+
+      // Submit changes for admin approval
+      await submitDoctorProfileChanges(doctorId, formData);
+      
+      console.log('✅ Profile changes submitted successfully');
+      setIsEditing(false);
+      
+      // Refresh pending changes
+      const pendingChangesData = await getDoctorPendingChanges(doctorId);
+      setPendingChanges(pendingChangesData);
+      
+      // Show success message (you can replace with a proper toast/notification)
+      alert('Profile changes submitted for admin approval!');
+      
+    } catch (error) {
+      console.error('❌ Error submitting profile changes:', error);
+      alert('Error submitting changes. Please try again.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -134,6 +228,25 @@ export default function DoctorSettings() {
               <h1 className="text-3xl font-bold text-gray-900">Settings</h1>
               <p className="text-gray-600 mt-2">Manage your profile and account settings</p>
             </div>
+
+            {/* Loading State */}
+            {loading ? (
+              <div className="text-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-600 mx-auto"></div>
+                <p className="mt-4 text-gray-600">Loading doctor profile...</p>
+              </div>
+            ) : (
+              <>
+                {/* Debug Information
+                <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <h3 className="font-medium text-yellow-800 mb-2">Debug Information</h3>
+                  <div className="text-sm text-yellow-700 space-y-1">
+                    <p>Doctor ID: {doctorId || "Not set"}</p>
+                    <p>Active Tab: {activeTab}</p>
+                    <p>Is Editing: {isEditing.toString()}</p>
+                    <p>Pending Changes: {pendingChanges.length}</p>
+                  </div>
+                </div> */}
 
             {/* Settings Tabs */}
             <div className="mb-8">
@@ -381,10 +494,11 @@ export default function DoctorSettings() {
                       </button>
                       <button
                         onClick={handleSave}
-                        className="flex items-center space-x-2 px-6 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 transition-colors"
+                        disabled={saving}
+                        className="flex items-center space-x-2 px-6 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 transition-colors disabled:opacity-50"
                       >
                         <Save className="w-4 h-4" />
-                        <span>Save Changes</span>
+                        <span>{saving ? 'Submitting...' : 'Submit for Approval'}</span>
                       </button>
                     </div>
                   )}
@@ -400,12 +514,46 @@ export default function DoctorSettings() {
                   <p className="text-gray-600 mt-1">Review changes waiting for approval</p>
                 </div>
                 <div className="p-6">
-                  <div className="text-center py-12">
-                    <SettingsIcon className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                    <p className="text-gray-500">No pending changes at this time</p>
-                  </div>
+                  {pendingChanges.length > 0 ? (
+                    <div className="space-y-4">
+                      {pendingChanges.map((change) => (
+                        <div key={change.id} className="border border-gray-200 rounded-lg p-4">
+                          <div className="flex items-start justify-between mb-3">
+                            <div>
+                              <h3 className="font-medium text-gray-900">Profile Update Request</h3>
+                              <p className="text-sm text-gray-500">Submitted: {new Date(change.submittedAt).toLocaleDateString()}</p>
+                            </div>
+                            <span className="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded-full">
+                              {change.status}
+                            </span>
+                          </div>
+                          
+                          {/* Show changed fields */}
+                          <div className="space-y-2 text-sm">
+                            {Object.entries(change.proposedChanges).map(([key, value]) => (
+                              <div key={key} className="grid grid-cols-3 gap-4">
+                                <span className="font-medium text-gray-700 capitalize">
+                                  {key.replace(/([A-Z])/g, ' $1').trim()}:
+                                </span>
+                                <span className="text-gray-600 truncate">
+                                  {typeof value === 'string' ? (value || 'Empty') : String(value)}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-12">
+                      <SettingsIcon className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                      <p className="text-gray-500">No pending changes at this time</p>
+                    </div>
+                  )}
                 </div>
               </div>
+            )}
+              </>
             )}
           </div>
         </div>

@@ -18,87 +18,143 @@ import {
   Clock,
   MoreHorizontal
 } from "lucide-react";
+import { 
+  getDoctorAppointments, 
+  getDoctorTodayAppointments, 
+  getDoctorUpcomingAppointments, 
+  getDoctorPastAppointments,
+  getAllAppointments,
+  Appointment 
+} from "../../../lib/services/appointmentService";
 
 export default function MyAppointments() {
   const [doctorName, setDoctorName] = useState("Test Doctor");
   const [doctorEmail, setDoctorEmail] = useState("doctor@gmail.com");
+  const [doctorId, setDoctorId] = useState("");
   const [currentDate, setCurrentDate] = useState("");
   const [activeTab, setActiveTab] = useState("Today");
   const [searchTerm, setSearchTerm] = useState("");
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [debugInfo, setDebugInfo] = useState<string>("Initializing...");
 
   useEffect(() => {
-    // Set current date
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, '0');
-    const day = String(today.getDate()).padStart(2, '0');
-    const formattedDate = `${year}-${month}-${day}`;
-    setCurrentDate(formattedDate);
+    const initializeAppointments = async () => {
+      try {
+        setDebugInfo("Starting initialization...");
+        
+        // Set current date
+        const today = new Date();
+        const year = today.getFullYear();
+        const month = String(today.getMonth() + 1).padStart(2, '0');
+        const day = String(today.getDate()).padStart(2, '0');
+        const formattedDate = `${year}-${month}-${day}`;
+        setCurrentDate(formattedDate);
 
-    // Get doctor data from localStorage if available
-    const currentUser = localStorage.getItem('currentUser');
-    if (currentUser) {
-      const userData = JSON.parse(currentUser);
-      if (userData.firstName && userData.lastName) {
-        setDoctorName(`${userData.firstName} ${userData.lastName}`);
+        setDebugInfo("Getting localStorage...");
+        
+        // Get doctor data from localStorage if available
+        let currentUser = localStorage.getItem('currentUser');
+        
+        // TEMPORARY: If no user in localStorage, simulate the doctor from your appointment data
+        if (!currentUser) {
+          const simulatedDoctor = {
+            id: "eNRqpc8os8MBgoBe9vKi",
+            email: "anjithasahashya@gmail.com", 
+            firstName: "Dr. Anjitha",
+            lastName: "Vidyarathna",
+            role: "doctor"
+          };
+          localStorage.setItem('currentUser', JSON.stringify(simulatedDoctor));
+          currentUser = JSON.stringify(simulatedDoctor);
+          setDebugInfo("Simulated doctor login for testing");
+        }
+        
+        console.log('🔍 Retrieved currentUser from localStorage:', currentUser);
+        setDebugInfo(`LocalStorage currentUser: ${currentUser ? 'Found' : 'Not found'}`);
+        
+        if (currentUser) {
+          const userData = JSON.parse(currentUser);
+          console.log('👤 Parsed userData:', userData);
+          setDebugInfo(`User data: ${JSON.stringify(userData)}`);
+          
+          if (userData.firstName && userData.lastName) {
+            setDoctorName(`${userData.firstName} ${userData.lastName}`);
+          }
+          if (userData.email) {
+            setDoctorEmail(userData.email);
+          }
+          if (userData.id) {
+            console.log('🆔 Setting doctorId to:', userData.id);
+            setDoctorId(userData.id);
+            setDebugInfo(`Doctor ID set to: ${userData.id}, loading appointments...`);
+            
+            // Fetch appointments based on active tab
+            await loadAppointments(userData.id, activeTab);
+          } else {
+            console.log('❌ No userData.id found in localStorage');
+            setDebugInfo('No user ID found in localStorage');
+          }
+        } else {
+          console.log('❌ No currentUser found in localStorage');
+          setDebugInfo('No currentUser found in localStorage');
+        }
+      } catch (error) {
+        console.error('Error initializing appointments:', error);
+        setDebugInfo(`Error: ${error}`);
+      } finally {
+        setLoading(false);
       }
-      if (userData.email) {
-        setDoctorEmail(userData.email);
-      }
-    }
-  }, []);
+    };
 
-  // Mock appointments data
-  const appointments = [
-    {
-      id: 1,
-      patientName: "Tharidu Johnson",
-      time: "9:00 AM",
-      duration: "(01 Hour)",
-      email: "tharidu@gmail.com",
-      phone: "+94 75 084 5396",
-      status: "Confirmed",
-      type: "Consultation",
-      notes: "Follow-up on blood pressure medication.",
-      statusColor: "bg-green-100 text-green-800"
-    },
-    {
-      id: 2,
-      patientName: "Tharidu Johnson",
-      time: "9:00 AM",
-      duration: "(01 Hour)",
-      email: "tharidu@gmail.com",
-      phone: "+94 75 084 5396",
-      status: "Confirmed",
-      type: "Consultation",
-      notes: "Follow-up on blood pressure medication.",
-      statusColor: "bg-green-100 text-green-800"
-    },
-    {
-      id: 3,
-      patientName: "Tharidu Johnson",
-      time: "9:00 AM",
-      duration: "(01 Hour)",
-      email: "tharidu@gmail.com",
-      phone: "+94 75 084 5396",
-      status: "Pending",
-      type: "Consultation",
-      notes: "Follow-up on blood pressure medication.",
-      statusColor: "bg-yellow-100 text-yellow-800"
-    },
-    {
-      id: 4,
-      patientName: "Tharidu Johnson",
-      time: "9:00 AM",
-      duration: "(01 Hour)",
-      email: "tharidu@gmail.com",
-      phone: "+94 75 084 5396",
-      status: "Cancelled",
-      type: "Consultation",
-      notes: "Follow-up on blood pressure medication.",
-      statusColor: "bg-red-100 text-red-800"
+    initializeAppointments();
+  }, [activeTab]);
+
+  const loadAppointments = async (doctorId: string, tab: string) => {
+    try {
+      console.log('📅 loadAppointments called with:', { doctorId, tab });
+      setDebugInfo(`Loading ${tab} appointments for doctor: ${doctorId}`);
+      setLoading(true);
+      let appointmentsData: Appointment[] = [];
+
+      switch (tab) {
+        case "Today":
+          console.log('📅 Fetching today appointments...');
+          setDebugInfo(`Fetching today appointments for: ${doctorId}`);
+          appointmentsData = await getDoctorTodayAppointments(doctorId);
+          break;
+        case "Upcoming":
+          console.log('📅 Fetching upcoming appointments...');
+          setDebugInfo(`Fetching upcoming appointments for: ${doctorId}`);
+          appointmentsData = await getDoctorUpcomingAppointments(doctorId);
+          break;
+        case "Past":
+          console.log('📅 Fetching past appointments...');
+          setDebugInfo(`Fetching past appointments for: ${doctorId}`);
+          appointmentsData = await getDoctorPastAppointments(doctorId);
+          break;
+        case "All":
+          console.log('📅 Fetching all appointments...');
+          setDebugInfo(`Fetching ALL appointments for: ${doctorId}`);
+          appointmentsData = await getDoctorAppointments(doctorId);
+          break;
+        default:
+          console.log('📅 Fetching today appointments (default)...');
+          setDebugInfo(`Fetching today appointments (default) for: ${doctorId}`);
+          appointmentsData = await getDoctorTodayAppointments(doctorId);
+      }
+
+      console.log('📋 Received appointments data:', appointmentsData);
+      setDebugInfo(`Received ${appointmentsData.length} appointments`);
+      setAppointments(appointmentsData);
+    } catch (error) {
+      console.error('❌ Error loading appointments:', error);
+      setDebugInfo(`Error loading appointments: ${error}`);
+      setAppointments([]);
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
 
   const tabs = ["Today", "Upcoming", "Past", "All"];
 
@@ -120,6 +176,48 @@ export default function MyAppointments() {
   const handleLogout = () => {
     localStorage.removeItem('currentUser');
     window.location.href = '/auth/login';
+  };
+
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab);
+    if (doctorId) {
+      loadAppointments(doctorId, tab);
+    }
+  };
+
+  const debugAllAppointments = async () => {
+    console.log('🐛 Debug: Starting comprehensive debug...');
+    
+    // Check localStorage
+    const currentUser = localStorage.getItem('currentUser');
+    const selectedDoctor = localStorage.getItem('selectedDoctor');
+    
+    console.log('🐛 Debug: localStorage currentUser:', currentUser);
+    console.log('🐛 Debug: localStorage selectedDoctor:', selectedDoctor);
+    
+    if (currentUser) {
+      const userData = JSON.parse(currentUser);
+      console.log('🐛 Debug: Parsed currentUser:', userData);
+      console.log('🐛 Debug: Current user ID:', userData.id);
+    }
+    
+    if (selectedDoctor) {
+      const doctorData = JSON.parse(selectedDoctor);
+      console.log('🐛 Debug: Parsed selectedDoctor:', doctorData);
+      console.log('🐛 Debug: Selected doctor ID:', doctorData.id);
+    }
+    
+    // Get all appointments
+    console.log('🐛 Debug: Fetching all appointments...');
+    const allAppointments = await getAllAppointments();
+    console.log('🐛 Debug: All appointments:', allAppointments);
+    
+    // Check if current user has appointments
+    if (currentUser) {
+      const userData = JSON.parse(currentUser);
+      const myAppointments = allAppointments.filter(apt => apt.doctorId === userData.id);
+      console.log('🐛 Debug: My appointments (matching current user ID):', myAppointments);
+    }
   };
 
   return (
@@ -212,6 +310,12 @@ export default function MyAppointments() {
             <button className="px-4 py-2 bg-cyan-500 text-white rounded-lg hover:bg-cyan-600 transition-colors">
               New Appointment
             </button>
+            {/* <button 
+              onClick={debugAllAppointments}
+              className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+            >
+              Debug All Appointments
+            </button> */}
           </div>
 
           {/* Tabs */}
@@ -219,7 +323,7 @@ export default function MyAppointments() {
             {tabs.map((tab) => (
               <button
                 key={tab}
-                onClick={() => setActiveTab(tab)}
+                onClick={() => handleTabChange(tab)}
                 className={`px-4 py-2 rounded-md font-medium transition-colors ${
                   activeTab === tab
                     ? "bg-white text-gray-900 shadow-sm"
@@ -231,59 +335,89 @@ export default function MyAppointments() {
             ))}
           </div>
 
+          {/* Debug Information
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+            <h3 className="font-semibold text-yellow-800 mb-2">Debug Information:</h3>
+            <div className="text-sm text-yellow-700">
+              <p><strong>Debug Status:</strong> {debugInfo}</p>
+              <p><strong>Doctor ID:</strong> {doctorId || 'Not set'}</p>
+              <p><strong>Doctor Name:</strong> {doctorName}</p>
+              <p><strong>Active Tab:</strong> {activeTab}</p>
+              <p><strong>Loading:</strong> {loading ? 'Yes' : 'No'}</p>
+              <p><strong>Appointments Count:</strong> {appointments.length}</p>
+              <p><strong>Current Date:</strong> {currentDate}</p>
+            </div>
+          </div> */}
+
           {/* Appointments List */}
           <div className="space-y-4">
-            {appointments.map((appointment) => (
-              <div key={appointment.id} className="bg-cyan-50 border border-cyan-200 rounded-lg p-6">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-start space-x-4">
-                    {/* Patient Avatar */}
-                    <div className="w-12 h-12 bg-gray-300 rounded-full flex items-center justify-center">
-                      <User className="w-6 h-6 text-gray-600" />
-                    </div>
-                    
-                    {/* Appointment Details */}
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-3 mb-2">
-                        <h3 className="font-semibold text-gray-900">{appointment.patientName}</h3>
+            {loading ? (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-600 mx-auto"></div>
+                <p className="mt-4 text-gray-600">Loading appointments...</p>
+              </div>
+            ) : appointments.length > 0 ? (
+              appointments.map((appointment) => (
+                <div key={appointment.id} className="bg-cyan-50 border border-cyan-200 rounded-lg p-6">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-start space-x-4">
+                      {/* Patient Avatar */}
+                      <div className="w-12 h-12 bg-gray-300 rounded-full flex items-center justify-center">
+                        <User className="w-6 h-6 text-gray-600" />
                       </div>
                       
-                      <div className="flex items-center space-x-6 text-sm text-gray-600 mb-3">
-                        <div className="flex items-center space-x-1">
-                          <Clock className="w-4 h-4" />
-                          <span>{appointment.time}</span>
-                          <span className="text-gray-400">{appointment.duration}</span>
+                      {/* Appointment Details */}
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-3 mb-2">
+                          <h3 className="font-semibold text-gray-900">
+                            {appointment.userfirstname} {appointment.userlastname}
+                          </h3>
                         </div>
-                        <div className="flex items-center space-x-1">
-                          <Mail className="w-4 h-4" />
-                          <span>{appointment.email}</span>
+                        
+                        <div className="flex items-center space-x-6 text-sm text-gray-600 mb-3">
+                          <div className="flex items-center space-x-1">
+                            <Clock className="w-4 h-4" />
+                            <span>{appointment.time}</span>
+                            <span className="text-gray-400">({appointment.serviceType})</span>
+                          </div>
+                          <div className="flex items-center space-x-1">
+                            <Mail className="w-4 h-4" />
+                            <span>{appointment.userEmail}</span>
+                          </div>
+                          <div className="flex items-center space-x-1">
+                            <Phone className="w-4 h-4" />
+                            <span>{appointment.userphonenumber}</span>
+                          </div>
                         </div>
-                        <div className="flex items-center space-x-1">
-                          <Phone className="w-4 h-4" />
-                          <span>{appointment.phone}</span>
-                        </div>
-                      </div>
 
-                      <div className="flex items-center space-x-3 mb-3">
-                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(appointment.status)}`}>
-                          {appointment.status}
-                        </span>
-                        <span className="px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                          {appointment.type}
-                        </span>
-                      </div>
+                        <div className="flex items-center space-x-3 mb-3">
+                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(appointment.status || 'Pending')}`}>
+                            {appointment.status || 'Pending'}
+                          </span>
+                          <span className="px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                            {appointment.serviceType}
+                          </span>
+                          <span className="text-xs text-gray-500">
+                            {new Date(appointment.date).toLocaleDateString()}
+                          </span>
+                        </div>
 
-                      <p className="text-sm text-gray-600">{appointment.notes}</p>
+                        <p className="text-sm text-gray-600">{appointment.userdescription}</p>
+                      </div>
                     </div>
-                  </div>
 
-                  {/* More Options */}
-                  <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                    <MoreHorizontal className="w-4 h-4 text-gray-400" />
-                  </button>
+                    {/* More Options */}
+                    <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                      <MoreHorizontal className="w-4 h-4 text-gray-400" />
+                    </button>
+                  </div>
                 </div>
+              ))
+            ) : (
+              <div className="text-center py-8">
+                <p className="text-gray-500">No appointments found for {activeTab.toLowerCase()}.</p>
               </div>
-            ))}
+            )}
           </div>
         </div>
       </div>

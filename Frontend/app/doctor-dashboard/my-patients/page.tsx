@@ -21,78 +21,116 @@ import {
   MessageCircle,
   FileText
 } from "lucide-react";
+import { getDoctorPatients } from "../../../lib/services/appointmentService";
 
 export default function MyPatients() {
   const [doctorName, setDoctorName] = useState("Test Doctor");
   const [doctorEmail, setDoctorEmail] = useState("doctor@gmail.com");
+  const [doctorId, setDoctorId] = useState("");
   const [currentDate, setCurrentDate] = useState("");
   const [activeTab, setActiveTab] = useState("All Patients");
   const [searchTerm, setSearchTerm] = useState("");
+  const [patients, setPatients] = useState<any[]>([]);
+  const [allPatients, setAllPatients] = useState<any[]>([]); // Store all patients for filtering
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Set current date
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, '0');
-    const day = String(today.getDate()).padStart(2, '0');
-    const formattedDate = `${year}-${month}-${day}`;
-    setCurrentDate(formattedDate);
+    const initializePatients = async () => {
+      try {
+        // Set current date
+        const today = new Date();
+        const year = today.getFullYear();
+        const month = String(today.getMonth() + 1).padStart(2, '0');
+        const day = String(today.getDate()).padStart(2, '0');
+        const formattedDate = `${year}-${month}-${day}`;
+        setCurrentDate(formattedDate);
 
-    // Get doctor data from localStorage if available
-    const currentUser = localStorage.getItem('currentUser');
-    if (currentUser) {
-      const userData = JSON.parse(currentUser);
-      if (userData.firstName && userData.lastName) {
-        setDoctorName(`${userData.firstName} ${userData.lastName}`);
+        // Get doctor data from localStorage if available
+        const currentUser = localStorage.getItem('currentUser');
+        if (currentUser) {
+          const userData = JSON.parse(currentUser);
+          if (userData.firstName && userData.lastName) {
+            setDoctorName(`${userData.firstName} ${userData.lastName}`);
+          }
+          if (userData.email) {
+            setDoctorEmail(userData.email);
+          }
+          if (userData.id) {
+            setDoctorId(userData.id);
+            
+            // Fetch patients data
+            await loadPatients(userData.id);
+          }
+        } else {
+          // Simulate doctor login for testing
+          console.log('🧪 No user in localStorage, simulating doctor login...');
+          const testDoctorId = 'eNRqpc8os8MBgoBe9vKi';
+          const testDoctorData = {
+            id: testDoctorId,
+            firstName: 'Test',
+            lastName: 'Doctor',
+            email: 'doctor@gmail.com'
+          };
+          
+          localStorage.setItem('currentUser', JSON.stringify(testDoctorData));
+          setDoctorId(testDoctorId);
+          setDoctorName('Test Doctor');
+          setDoctorEmail('doctor@gmail.com');
+          
+          // Fetch patients data
+          await loadPatients(testDoctorId);
+        }
+      } catch (error) {
+        console.error('Error initializing patients:', error);
+      } finally {
+        setLoading(false);
       }
-      if (userData.email) {
-        setDoctorEmail(userData.email);
-      }
-    }
+    };
+
+    initializePatients();
   }, []);
 
-  // Mock patients data
-  const patients = [
-    {
-      id: 1,
-      patientName: "Tharidu Johnson",
-      email: "tharidu@gmail.com",
-      age: 28,
-      lastVisit: "2025-09-15",
-      phone: "+94 75 084 5396",
-      status: "Active",
-      nextAppointment: "2025-09-22",
-      medicalConditions: "",
-      allergies: "",
-      statusColor: "bg-green-100 text-green-800"
-    },
-    {
-      id: 2,
-      patientName: "Tharidu Johnson",
-      email: "tharidu@gmail.com",
-      age: 26,
-      lastVisit: "2025-09-15",
-      phone: "+94 75 084 5396",
-      status: "New",
-      nextAppointment: "",
-      medicalConditions: "",
-      allergies: "",
-      statusColor: "bg-blue-100 text-blue-800"
-    },
-    {
-      id: 3,
-      patientName: "Tharidu Johnson",
-      email: "tharidu@gmail.com",
-      age: 26,
-      lastVisit: "2025-09-15",
-      phone: "+94 75 084 5396",
-      status: "Inactive",
-      nextAppointment: "2025-09-22",
-      medicalConditions: "",
-      allergies: "",
-      statusColor: "bg-orange-100 text-orange-800"
+  const loadPatients = async (doctorId: string) => {
+    try {
+      setLoading(true);
+      const patientsData = await getDoctorPatients(doctorId);
+      
+      console.log('👥 Loaded patients data:', patientsData);
+      
+      // Store all patients for filtering
+      setAllPatients(patientsData);
+      
+      // Apply current filters
+      filterPatients(patientsData, activeTab, searchTerm);
+    } catch (error) {
+      console.error('Error loading patients:', error);
+      setAllPatients([]);
+      setPatients([]);
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
+
+  const filterPatients = (patientsData: any[], tab: string, search: string) => {
+    let filteredPatients = [...patientsData];
+    
+    // Filter by tab
+    if (tab !== "All Patients") {
+      filteredPatients = filteredPatients.filter(patient => patient.status === tab);
+    }
+    
+    // Filter by search term
+    if (search.trim()) {
+      const searchLower = search.toLowerCase();
+      filteredPatients = filteredPatients.filter(patient => 
+        patient.patientName.toLowerCase().includes(searchLower) ||
+        patient.email.toLowerCase().includes(searchLower) ||
+        patient.phone.includes(search)
+      );
+    }
+    
+    setPatients(filteredPatients);
+  };
 
   const tabs = ["All Patients", "Active", "New", "Inactive"];
 
@@ -112,6 +150,17 @@ export default function MyPatients() {
   const handleLogout = () => {
     localStorage.removeItem('currentUser');
     window.location.href = '/auth/login';
+  };
+
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab);
+    filterPatients(allPatients, tab, searchTerm);
+  };
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newSearchTerm = e.target.value;
+    setSearchTerm(newSearchTerm);
+    filterPatients(allPatients, activeTab, newSearchTerm);
   };
 
   return (
@@ -183,6 +232,18 @@ export default function MyPatients() {
             </div>
           </div>
 
+          {/* Debug Information
+          <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <h3 className="font-medium text-yellow-800 mb-2">Debug Information</h3>
+            <div className="text-sm text-yellow-700 space-y-1">
+              <p>Doctor ID: {doctorId || "Not set"}</p>
+              <p>Active Tab: {activeTab}</p>
+              <p>Loading: {loading.toString()}</p>
+              <p>Patients Count: {patients.length}</p>
+              <p>Search Term: {searchTerm || "None"}</p>
+            </div>
+          </div> */}
+
           {/* Search and Filter Bar */}
           <div className="flex justify-between items-center mb-6">
             <div className="flex items-center space-x-4">
@@ -192,7 +253,7 @@ export default function MyPatients() {
                   type="text"
                   placeholder="Search Patients..."
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onChange={handleSearchChange}
                   className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent w-80"
                 />
               </div>
@@ -211,7 +272,7 @@ export default function MyPatients() {
             {tabs.map((tab) => (
               <button
                 key={tab}
-                onClick={() => setActiveTab(tab)}
+                onClick={() => handleTabChange(tab)}
                 className={`px-4 py-2 rounded-md font-medium transition-colors ${
                   activeTab === tab
                     ? "bg-white text-gray-900 shadow-sm"
@@ -225,7 +286,13 @@ export default function MyPatients() {
 
           {/* Patients List */}
           <div className="space-y-4">
-            {patients.map((patient) => (
+            {loading ? (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-600 mx-auto"></div>
+                <p className="mt-4 text-gray-600">Loading patients...</p>
+              </div>
+            ) : patients.length > 0 ? (
+              patients.map((patient) => (
               <div key={patient.id} className="bg-cyan-50 border border-cyan-200 rounded-lg p-6">
                 <div className="flex items-start justify-between">
                   <div className="flex items-start space-x-4">
@@ -260,6 +327,14 @@ export default function MyPatients() {
                           <Phone className="w-4 h-4" />
                           <span>{patient.phone}</span>
                         </div>
+                        <div className="flex items-center space-x-1">
+                          <Calendar className="w-4 h-4" />
+                          <span>Total Appointments: {patient.totalAppointments}</span>
+                        </div>
+                        <div className="flex items-center space-x-1">
+                          <User className="w-4 h-4" />
+                          <span>Patient ID: {patient.id}</span>
+                        </div>
                       </div>
 
                       {patient.nextAppointment && (
@@ -279,7 +354,36 @@ export default function MyPatients() {
                           <span className="font-medium text-gray-700">Allergies:</span>
                           <span className="text-gray-600 ml-2">{patient.allergies || "None recorded"}</span>
                         </div>
+                        <div>
+                          <span className="font-medium text-gray-700">Address:</span>
+                          <span className="text-gray-600 ml-2">{patient.address || "Not provided"}</span>
+                        </div>
                       </div>
+                      
+                      {/* Recent Appointments */}
+                      {patient.appointments && patient.appointments.length > 0 && (
+                        <div className="mt-4 pt-4 border-t border-cyan-200">
+                          <h4 className="font-medium text-gray-700 mb-2">Recent Appointments</h4>
+                          <div className="space-y-1">
+                            {patient.appointments.slice(0, 3).map((appointment: any, index: number) => (
+                              <div key={index} className="text-xs text-gray-600 bg-white p-2 rounded border">
+                                <div className="flex justify-between items-center">
+                                  <span>{appointment.date} at {appointment.time}</span>
+                                  <span className="text-cyan-600 font-medium">{appointment.serviceType}</span>
+                                </div>
+                                {appointment.description && (
+                                  <div className="mt-1 text-gray-500">{appointment.description}</div>
+                                )}
+                              </div>
+                            ))}
+                            {patient.appointments.length > 3 && (
+                              <div className="text-xs text-gray-500 italic">
+                                +{patient.appointments.length - 3} more appointments
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -299,7 +403,12 @@ export default function MyPatients() {
                   </div>
                 </div>
               </div>
-            ))}
+              ))
+            ) : (
+              <div className="text-center py-8">
+                <p className="text-gray-500">No patients found.</p>
+              </div>
+            )}
           </div>
         </div>
       </div>

@@ -18,91 +18,97 @@ import {
   Clock,
   MoreHorizontal
 } from "lucide-react";
+import { 
+  getDoctorAppointments, 
+  getDoctorTodayAppointments, 
+  getDoctorUpcomingAppointments, 
+  getDoctorPastAppointments,
+  Appointment 
+} from "../../../lib/services/appointmentService";
 
 export default function MySessions() {
   const [doctorName, setDoctorName] = useState("Test Doctor");
   const [doctorEmail, setDoctorEmail] = useState("doctor@gmail.com");
+  const [doctorId, setDoctorId] = useState("");
   const [currentDate, setCurrentDate] = useState("");
   const [activeTab, setActiveTab] = useState("Today");
   const [searchTerm, setSearchTerm] = useState("");
+  const [sessions, setSessions] = useState<Appointment[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Set current date
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, '0');
-    const day = String(today.getDate()).padStart(2, '0');
-    const formattedDate = `${year}-${month}-${day}`;
-    setCurrentDate(formattedDate);
+    const initializeSessions = async () => {
+      try {
+        // Set current date
+        const today = new Date();
+        const year = today.getFullYear();
+        const month = String(today.getMonth() + 1).padStart(2, '0');
+        const day = String(today.getDate()).padStart(2, '0');
+        const formattedDate = `${year}-${month}-${day}`;
+        setCurrentDate(formattedDate);
 
-    // Get doctor data from localStorage if available
-    const currentUser = localStorage.getItem('currentUser');
-    if (currentUser) {
-      const userData = JSON.parse(currentUser);
-      if (userData.firstName && userData.lastName) {
-        setDoctorName(`${userData.firstName} ${userData.lastName}`);
+        // Get doctor data from localStorage if available
+        const currentUser = localStorage.getItem('currentUser');
+        if (currentUser) {
+          const userData = JSON.parse(currentUser);
+          if (userData.firstName && userData.lastName) {
+            setDoctorName(`${userData.firstName} ${userData.lastName}`);
+          }
+          if (userData.email) {
+            setDoctorEmail(userData.email);
+          }
+          if (userData.id) {
+            setDoctorId(userData.id);
+            
+            // Fetch sessions (confirmed appointments) based on active tab
+            await loadSessions(userData.id, activeTab);
+          }
+        }
+      } catch (error) {
+        console.error('Error initializing sessions:', error);
+      } finally {
+        setLoading(false);
       }
-      if (userData.email) {
-        setDoctorEmail(userData.email);
-      }
-    }
-  }, []);
+    };
 
-  // Mock sessions data
-  const sessions = [
-    {
-      id: 1,
-      patientName: "Tharidu Johnson",
-      sessionId: "Session 8/12",
-      time: "9:00 AM",
-      duration: "(01 Hour)",
-      email: "tharidu@gmail.com",
-      phone: "+94 75 084 5396",
-      status: "Confirmed",
-      type: "Consultation",
-      notes: "Notes: Patients showed significant progress in anxiety management techniques. Discussing coping strategies for work-related stress.",
-      statusColor: "bg-green-100 text-green-800"
-    },
-    {
-      id: 2,
-      patientName: "Tharidu Johnson",
-      sessionId: "Session 9/12",
-      time: "9:00 AM",
-      duration: "(01 Hour)",
-      email: "tharidu@gmail.com",
-      phone: "+94 75 084 5396",
-      status: "Confirmed",
-      type: "Consultation",
-      notes: "Notes: Patients showed significant progress in anxiety management techniques. Discussing coping strategies for work-related stress.",
-      statusColor: "bg-green-100 text-green-800"
-    },
-    {
-      id: 3,
-      patientName: "Tharidu Johnson",
-      sessionId: "Session 6/12",
-      time: "9:00 AM",
-      duration: "(01 Hour)",
-      email: "tharidu@gmail.com",
-      phone: "+94 75 084 5396",
-      status: "Completed",
-      type: "Follow-up",
-      notes: "Notes: Patients showed significant progress in anxiety management techniques. Discussing coping strategies for work-related stress.",
-      statusColor: "bg-red-100 text-red-800"
-    },
-    {
-      id: 4,
-      patientName: "Tharidu Johnson",
-      sessionId: "Session 8/12",
-      time: "9:00 AM",
-      duration: "(01 Hour)",
-      email: "tharidu@gmail.com",
-      phone: "+94 75 084 5396",
-      status: "Upcoming",
-      type: "Assessment",
-      notes: "Notes: Patients showed significant progress in anxiety management techniques. Discussing coping strategies for work-related stress.",
-      statusColor: "bg-blue-100 text-blue-800"
+    initializeSessions();
+  }, [activeTab]);
+
+  const loadSessions = async (doctorId: string, tab: string) => {
+    try {
+      setLoading(true);
+      let sessionsData: Appointment[] = [];
+
+      switch (tab) {
+        case "Today":
+          sessionsData = await getDoctorTodayAppointments(doctorId);
+          break;
+        case "Upcoming":
+          sessionsData = await getDoctorUpcomingAppointments(doctorId);
+          break;
+        case "Past":
+          sessionsData = await getDoctorPastAppointments(doctorId);
+          break;
+        case "All":
+          sessionsData = await getDoctorAppointments(doctorId);
+          break;
+        default:
+          sessionsData = await getDoctorTodayAppointments(doctorId);
+      }
+
+      // Filter for confirmed appointments only (these are considered "sessions")
+      const confirmedSessions = sessionsData.filter(session => 
+        session.status === 'Confirmed' || session.status === 'Completed'
+      );
+
+      setSessions(confirmedSessions);
+    } catch (error) {
+      console.error('Error loading sessions:', error);
+      setSessions([]);
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
 
   const tabs = ["Today", "Upcoming", "Past", "All"];
 
@@ -122,6 +128,13 @@ export default function MySessions() {
   const handleLogout = () => {
     localStorage.removeItem('currentUser');
     window.location.href = '/auth/login';
+  };
+
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab);
+    if (doctorId) {
+      loadSessions(doctorId, tab);
+    }
   };
 
   return (
@@ -221,7 +234,7 @@ export default function MySessions() {
             {tabs.map((tab) => (
               <button
                 key={tab}
-                onClick={() => setActiveTab(tab)}
+                onClick={() => handleTabChange(tab)}
                 className={`px-4 py-2 rounded-md font-medium transition-colors ${
                   activeTab === tab
                     ? "bg-white text-gray-900 shadow-sm"
@@ -235,64 +248,80 @@ export default function MySessions() {
 
           {/* Sessions List */}
           <div className="space-y-4">
-            {sessions.map((session) => (
-              <div key={session.id} className="bg-cyan-50 border border-cyan-200 rounded-lg p-6">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-start space-x-4">
-                    {/* Patient Avatar */}
-                    <div className="w-12 h-12 bg-gray-300 rounded-full flex items-center justify-center">
-                      <User className="w-6 h-6 text-gray-600" />
-                    </div>
-                    
-                    {/* Session Details */}
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-3 mb-2">
-                        <h3 className="font-semibold text-gray-900">{session.patientName}</h3>
-                        <span className="px-2 py-1 bg-orange-100 text-orange-800 text-xs rounded-full font-medium">
-                          {session.sessionId}
-                        </span>
+            {loading ? (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-600 mx-auto"></div>
+                <p className="mt-4 text-gray-600">Loading sessions...</p>
+              </div>
+            ) : sessions.length > 0 ? (
+              sessions.map((session, index) => (
+                <div key={session.id} className="bg-cyan-50 border border-cyan-200 rounded-lg p-6">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-start space-x-4">
+                      {/* Patient Avatar */}
+                      <div className="w-12 h-12 bg-gray-300 rounded-full flex items-center justify-center">
+                        <User className="w-6 h-6 text-gray-600" />
                       </div>
                       
-                      <div className="flex items-center space-x-6 text-sm text-gray-600 mb-3">
-                        <div className="flex items-center space-x-1">
-                          <Clock className="w-4 h-4" />
-                          <span>{session.time}</span>
-                          <span className="text-gray-400">{session.duration}</span>
+                      {/* Session Details */}
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-3 mb-2">
+                          <h3 className="font-semibold text-gray-900">
+                            {session.userfirstname} {session.userlastname}
+                          </h3>
+                          <span className="px-2 py-1 bg-orange-100 text-orange-800 text-xs rounded-full font-medium">
+                            Session #{index + 1}
+                          </span>
                         </div>
-                        <div className="flex items-center space-x-1">
-                          <Mail className="w-4 h-4" />
-                          <span>{session.email}</span>
+                        
+                        <div className="flex items-center space-x-6 text-sm text-gray-600 mb-3">
+                          <div className="flex items-center space-x-1">
+                            <Clock className="w-4 h-4" />
+                            <span>{session.time}</span>
+                            <span className="text-gray-400">({session.serviceType})</span>
+                          </div>
+                          <div className="flex items-center space-x-1">
+                            <Mail className="w-4 h-4" />
+                            <span>{session.userEmail}</span>
+                          </div>
+                          <div className="flex items-center space-x-1">
+                            <Phone className="w-4 h-4" />
+                            <span>{session.userphonenumber}</span>
+                          </div>
                         </div>
-                        <div className="flex items-center space-x-1">
-                          <Phone className="w-4 h-4" />
-                          <span>{session.phone}</span>
-                        </div>
-                      </div>
 
-                      <div className="flex items-center space-x-3 mb-3">
-                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(session.status)}`}>
-                          {session.status}
-                        </span>
-                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                          session.type === "Consultation" ? "bg-gray-100 text-gray-800" :
-                          session.type === "Follow-up" ? "bg-purple-100 text-purple-800" :
-                          "bg-yellow-100 text-yellow-800"
-                        }`}>
-                          {session.type}
-                        </span>
-                      </div>
+                        <div className="flex items-center space-x-3 mb-3">
+                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(session.status || 'Confirmed')}`}>
+                            {session.status || 'Confirmed'}
+                          </span>
+                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                            session.serviceType === "Consultation" ? "bg-gray-100 text-gray-800" :
+                            session.serviceType === "Follow-up" ? "bg-purple-100 text-purple-800" :
+                            "bg-yellow-100 text-yellow-800"
+                          }`}>
+                            {session.serviceType}
+                          </span>
+                          <span className="text-xs text-gray-500">
+                            {new Date(session.date).toLocaleDateString()}
+                          </span>
+                        </div>
 
-                      <p className="text-sm text-gray-600">{session.notes}</p>
+                        <p className="text-sm text-gray-600">{session.userdescription}</p>
+                      </div>
                     </div>
-                  </div>
 
-                  {/* More Options */}
-                  <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                    <MoreHorizontal className="w-4 h-4 text-gray-400" />
-                  </button>
+                    {/* More Options */}
+                    <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                      <MoreHorizontal className="w-4 h-4 text-gray-400" />
+                    </button>
+                  </div>
                 </div>
+              ))
+            ) : (
+              <div className="text-center py-8">
+                <p className="text-gray-500">No sessions found for {activeTab.toLowerCase()}.</p>
               </div>
-            ))}
+            )}
           </div>
         </div>
       </div>

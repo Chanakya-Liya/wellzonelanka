@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
+import emailjs from '@emailjs/browser';
 import {
   Facebook,
   Instagram,
@@ -10,6 +11,8 @@ import {
   MapPin,
   Send,
   CheckCircle,
+  AlertCircle,
+  Loader,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -18,6 +21,7 @@ import { Footer } from "@/app/Footer";
 import Sidebar from "@/app/Sidebar";
 
 export default function Contact() {
+  const form = useRef<HTMLFormElement>(null);
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -29,6 +33,29 @@ export default function Contact() {
   });
 
   const [showPopup, setShowPopup] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [popupType, setPopupType] = useState<'success' | 'error'>('success');
+  const [popupMessage, setPopupMessage] = useState('');
+
+  // EmailJS configuration - Using environment variables with fallback and debugging
+  const EMAILJS_SERVICE_ID = process.env.NEXT_PUBLIC_EMAILJS_SERVICE_ID || 'service_zoxf3sq';
+  const EMAILJS_TEMPLATE_ID = process.env.NEXT_PUBLIC_EMAILJS_TEMPLATE_ID || 'template_2ma107y';
+  const EMAILJS_PUBLIC_KEY = process.env.NEXT_PUBLIC_EMAILJS_PUBLIC_KEY || 'Xsp1gQRGxnYEATnWB';
+
+  // Debug environment variables
+  console.log('EmailJS Config Debug:', {
+    serviceId: EMAILJS_SERVICE_ID,
+    templateId: EMAILJS_TEMPLATE_ID,
+    publicKey: EMAILJS_PUBLIC_KEY ? 'Loaded' : 'Missing'
+  });
+
+  // Initialize EmailJS
+  useEffect(() => {
+    if (EMAILJS_PUBLIC_KEY) {
+      emailjs.init(EMAILJS_PUBLIC_KEY);
+      console.log('EmailJS initialized with public key');
+    }
+  }, [EMAILJS_PUBLIC_KEY]);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -41,24 +68,92 @@ export default function Contact() {
     }));
   };
 
-  const handleSubmit = (e: { preventDefault: () => void }) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    console.log("Form submitted:", formData);
+    
+    if (!formData.agreeToTerms) {
+      setPopupType('error');
+      setPopupMessage('Please agree to the Privacy Policy and Terms of Service');
+      setShowPopup(true);
+      setTimeout(() => setShowPopup(false), 5000);
+      return;
+    }
 
-    // Show popup
-    setShowPopup(true);
-    setTimeout(() => setShowPopup(false), 3000); // auto hide after 3s
+    setIsLoading(true);
 
-    // Reset form
-    setFormData({
-      firstName: "",
-      lastName: "",
-      email: "",
-      phone: "",
-      subject: "",
-      message: "",
-      agreeToTerms: false,
-    });
+    try {
+      // Parameters for admin/support notification
+      const templateParams = {
+        from_name: `${formData.firstName} ${formData.lastName}`,
+        from_email: formData.email,
+        phone: formData.phone || 'Not provided',
+        subject: formData.subject,
+        message: formData.message,
+        to_name: 'WellZone Lanka Support',
+        to_email: 'thevinu2005@gmail.com',
+        reply_to: formData.email,
+      };
+
+      console.log("Sending main email with params:", templateParams);
+
+      // Send message to support/admin
+      await emailjs.send(
+        EMAILJS_SERVICE_ID,
+        EMAILJS_TEMPLATE_ID,
+        templateParams
+      );
+
+      // Parameters for thank-you mail to the user
+      const thankYouParams = {
+        to_name: `${formData.firstName} ${formData.lastName}`,
+        to_email: formData.email,
+        subject: "Thank You for Contacting WellZone Lanka",
+        message: `Dear ${formData.firstName},  
+        
+Thank you for reaching out to us! We've received your message regarding "${formData.subject}" and our team will get back to you shortly.  
+
+Best regards,  
+WellZone Lanka Support Team`,
+        from_name: "WellZone Lanka",
+        reply_to: "wellzonelanka@gmail.com"
+      };
+
+      console.log("Sending thank-you email with params:", thankYouParams);
+
+      // Send thank-you email
+      await emailjs.send(
+        EMAILJS_SERVICE_ID,
+        EMAILJS_TEMPLATE_ID,
+        thankYouParams
+      );
+
+      // Success popup
+      setPopupType("success");
+      setPopupMessage("✅ Your message has been sent successfully! We'll get back to you soon.");
+      setShowPopup(true);
+      setTimeout(() => setShowPopup(false), 5000);
+
+      // Reset form
+      setFormData({
+        firstName: "",
+        lastName: "",
+        email: "",
+        phone: "",
+        subject: "",
+        message: "",
+        agreeToTerms: false,
+      });
+      form.current?.reset();
+
+    } catch (error: any) {
+      console.error("Email sending failed:", error);
+      setPopupType("error");
+      setPopupMessage("❌ Failed to send message. Please try again.");
+      setShowPopup(true);
+      setTimeout(() => setShowPopup(false), 8000);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -67,12 +162,20 @@ export default function Contact() {
       <Navbar />
       <Sidebar />
 
-      {/* Popup Notification */}
+      {/* Enhanced Popup Notification */}
       {showPopup && (
         <div className="fixed top-5 right-5 z-50 animate-slide-in">
-          <div className="flex items-center space-x-3 bg-blue-500 text-white px-6 py-4 rounded-xl shadow-lg">
-            <CheckCircle className="h-6 w-6" />
-            <p className="font-medium">✅ Your message has been submitted!</p>
+          <div className={`flex items-center space-x-3 px-6 py-4 rounded-xl shadow-lg ${
+            popupType === 'success' 
+              ? 'bg-green-500 text-white' 
+              : 'bg-red-500 text-white'
+          }`}>
+            {popupType === 'success' ? (
+              <CheckCircle className="h-6 w-6" />
+            ) : (
+              <AlertCircle className="h-6 w-6" />
+            )}
+            <p className="font-medium">{popupMessage}</p>
           </div>
         </div>
       )}
@@ -227,6 +330,7 @@ export default function Contact() {
                 Send Us a Message
               </h2>
               <form
+                ref={form}
                 onSubmit={handleSubmit}
                 className="space-y-6"
                 style={{ paddingBottom: 20 }}
@@ -242,6 +346,7 @@ export default function Contact() {
                     <input
                       type="text"
                       id="firstName"
+                      name="firstName"
                       value={formData.firstName}
                       onChange={handleChange}
                       required
@@ -260,6 +365,7 @@ export default function Contact() {
                     <input
                       type="text"
                       id="lastName"
+                      name="lastName"
                       value={formData.lastName}
                       onChange={handleChange}
                       required
@@ -280,6 +386,7 @@ export default function Contact() {
                     <input
                       type="email"
                       id="email"
+                      name="email"
                       value={formData.email}
                       onChange={handleChange}
                       required
@@ -298,6 +405,7 @@ export default function Contact() {
                     <input
                       type="tel"
                       id="phone"
+                      name="phone"
                       value={formData.phone}
                       onChange={handleChange}
                       className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all"
@@ -316,6 +424,7 @@ export default function Contact() {
                   <input
                     type="text"
                     id="subject"
+                    name="subject"
                     value={formData.subject}
                     onChange={handleChange}
                     required
@@ -333,6 +442,7 @@ export default function Contact() {
                   </label>
                   <textarea
                     id="message"
+                    name="message"
                     value={formData.message}
                     onChange={handleChange}
                     required
@@ -379,11 +489,21 @@ export default function Contact() {
 
                 <button
                   type="submit"
-                  className="w-full bg-cyan-600 border border-transparent rounded-lg shadow-sm py-3 px-6 text-base font-medium text-white hover:bg-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 transition-colors"
+                  disabled={isLoading}
+                  className="w-full bg-cyan-600 border border-transparent rounded-lg shadow-sm py-3 px-6 text-base font-medium text-white hover:bg-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
                 >
                   <div className="flex items-center justify-center">
-                    <Send className="h-5 w-5 mr-2" />
-                    Send Message
+                    {isLoading ? (
+                      <>
+                        <Loader className="h-5 w-5 mr-2 animate-spin" />
+                        Sending...
+                      </>
+                    ) : (
+                      <>
+                        <Send className="h-5 w-5 mr-2" />
+                        Send Message
+                      </>
+                    )}
                   </div>
                 </button>
               </form>

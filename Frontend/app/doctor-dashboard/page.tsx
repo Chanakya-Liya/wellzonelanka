@@ -14,32 +14,69 @@ import {
   Activity,
   Search
 } from "lucide-react";
+import { getDoctorAppointmentStats, getDoctorUpcomingAppointments, Appointment } from "../../lib/services/appointmentService";
 
 export default function DoctorDashboard() {
   const [doctorName, setDoctorName] = useState("Test Doctor");
   const [doctorEmail, setDoctorEmail] = useState("doctor@gmail.com");
+  const [doctorId, setDoctorId] = useState("");
   const [currentDate, setCurrentDate] = useState("");
+  const [stats, setStats] = useState({
+    totalPatients: 0,
+    newBookings: 0,
+    todaySessions: 0,
+    profileViews: 1
+  });
+  const [upcomingSessions, setUpcomingSessions] = useState<Appointment[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Set current date
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, '0');
-    const day = String(today.getDate()).padStart(2, '0');
-    const formattedDate = `${year}-${month}-${day}`;
-    setCurrentDate(formattedDate);
+    const initializeDashboard = async () => {
+      try {
+        // Set current date
+        const today = new Date();
+        const year = today.getFullYear();
+        const month = String(today.getMonth() + 1).padStart(2, '0');
+        const day = String(today.getDate()).padStart(2, '0');
+        const formattedDate = `${year}-${month}-${day}`;
+        setCurrentDate(formattedDate);
 
-    // Get doctor data from localStorage if available
-    const currentUser = localStorage.getItem('currentUser');
-    if (currentUser) {
-      const userData = JSON.parse(currentUser);
-      if (userData.firstName && userData.lastName) {
-        setDoctorName(`${userData.firstName} ${userData.lastName}`);
+        // Get doctor data from localStorage if available
+        const currentUser = localStorage.getItem('currentUser');
+        if (currentUser) {
+          const userData = JSON.parse(currentUser);
+          if (userData.firstName && userData.lastName) {
+            setDoctorName(`${userData.firstName} ${userData.lastName}`);
+          }
+          if (userData.email) {
+            setDoctorEmail(userData.email);
+          }
+          if (userData.id) {
+            setDoctorId(userData.id);
+            
+            // Fetch real data from Firebase
+            try {
+              const [statsData, upcomingAppointments] = await Promise.all([
+                getDoctorAppointmentStats(userData.id),
+                getDoctorUpcomingAppointments(userData.id)
+              ]);
+              
+              setStats(statsData);
+              setUpcomingSessions(upcomingAppointments.slice(0, 5)); // Show only first 5 upcoming sessions
+            } catch (error) {
+              console.error('Error fetching dashboard data:', error);
+              // Keep default values on error
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error initializing dashboard:', error);
+      } finally {
+        setLoading(false);
       }
-      if (userData.email) {
-        setDoctorEmail(userData.email);
-      }
-    }
+    };
+
+    initializeDashboard();
   }, []);
 
   const handleLogout = () => {
@@ -140,7 +177,7 @@ export default function DoctorDashboard() {
               {/* Profile Views */}
               <div className="bg-blue-50 rounded-lg p-4 relative">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-2xl font-bold text-gray-900">1</span>
+                  <span className="text-2xl font-bold text-gray-900">{stats.profileViews}</span>
                   <div className="bg-blue-100 p-2 rounded-full">
                     <Search className="w-5 h-5 text-blue-600" />
                   </div>
@@ -151,7 +188,7 @@ export default function DoctorDashboard() {
               {/* All Patients */}
               <div className="bg-green-50 rounded-lg p-4 relative">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-2xl font-bold text-gray-900">100</span>
+                  <span className="text-2xl font-bold text-gray-900">{stats.totalPatients}</span>
                   <div className="bg-green-100 p-2 rounded-full">
                     <Search className="w-5 h-5 text-green-600" />
                   </div>
@@ -162,7 +199,7 @@ export default function DoctorDashboard() {
               {/* New Booking */}
               <div className="bg-purple-50 rounded-lg p-4 relative">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-2xl font-bold text-gray-900">5</span>
+                  <span className="text-2xl font-bold text-gray-900">{stats.newBookings}</span>
                   <div className="bg-purple-100 p-2 rounded-full">
                     <Search className="w-5 h-5 text-purple-600" />
                   </div>
@@ -173,7 +210,7 @@ export default function DoctorDashboard() {
               {/* Today Sessions */}
               <div className="bg-orange-50 rounded-lg p-4 relative">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-2xl font-bold text-gray-900">2</span>
+                  <span className="text-2xl font-bold text-gray-900">{stats.todaySessions}</span>
                   <div className="bg-orange-100 p-2 rounded-full">
                     <Search className="w-5 h-5 text-orange-600" />
                   </div>
@@ -202,36 +239,39 @@ export default function DoctorDashboard() {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  <tr>
-                    <td className="px-4 py-4 whitespace-nowrap">
-                      <div>
-                        <div className="text-sm font-medium text-gray-900">Online</div>
-                        <div className="text-sm text-gray-500">Amanda</div>
-                      </div>
-                    </td>
-                    <td className="px-4 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">Today</div>
-                      <div className="text-sm text-gray-500">10/10/205</div>
-                    </td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
-                      1:30PM
-                    </td>
-                  </tr>
-                  <tr>
-                    <td className="px-4 py-4 whitespace-nowrap">
-                      <div>
-                        <div className="text-sm font-medium text-gray-900">Online</div>
-                        <div className="text-sm text-gray-500">Amanda</div>
-                      </div>
-                    </td>
-                    <td className="px-4 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">Today</div>
-                      <div className="text-sm text-gray-500">10/10/205</div>
-                    </td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
-                      5:00PM
-                    </td>
-                  </tr>
+                  {loading ? (
+                    <tr>
+                      <td colSpan={3} className="px-4 py-4 text-center text-gray-500">
+                        Loading sessions...
+                      </td>
+                    </tr>
+                  ) : upcomingSessions.length > 0 ? (
+                    upcomingSessions.map((session) => (
+                      <tr key={session.id}>
+                        <td className="px-4 py-4 whitespace-nowrap">
+                          <div>
+                            <div className="text-sm font-medium text-gray-900">{session.serviceType}</div>
+                            <div className="text-sm text-gray-500">{session.userfirstname} {session.userlastname}</div>
+                          </div>
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-900">
+                            {new Date(session.date).toLocaleDateString() === new Date().toLocaleDateString() ? 'Today' : 'Upcoming'}
+                          </div>
+                          <div className="text-sm text-gray-500">{new Date(session.date).toLocaleDateString()}</div>
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {session.time}
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={3} className="px-4 py-4 text-center text-gray-500">
+                        No upcoming sessions
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
