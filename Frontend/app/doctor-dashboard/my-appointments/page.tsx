@@ -335,7 +335,7 @@ export default function MyAppointments() {
             ))}
           </div>
 
-          {/* Debug Information
+          {/* Debug Information */}
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
             <h3 className="font-semibold text-yellow-800 mb-2">Debug Information:</h3>
             <div className="text-sm text-yellow-700">
@@ -346,8 +346,18 @@ export default function MyAppointments() {
               <p><strong>Loading:</strong> {loading ? 'Yes' : 'No'}</p>
               <p><strong>Appointments Count:</strong> {appointments.length}</p>
               <p><strong>Current Date:</strong> {currentDate}</p>
+              {appointments.length > 0 && (
+                <div className="mt-2">
+                  <p><strong>Sample Appointment Dates:</strong></p>
+                  {appointments.slice(0, 3).map(apt => (
+                    <p key={apt.id} className="ml-2">
+                      - {apt.userfirstname}: {apt.date} (Raw: {JSON.stringify(apt.date)})
+                    </p>
+                  ))}
+                </div>
+              )}
             </div>
-          </div> */}
+          </div>
 
           {/* Appointments List */}
           <div className="space-y-4">
@@ -398,7 +408,7 @@ export default function MyAppointments() {
                             {appointment.serviceType}
                           </span>
                           <span className="text-xs text-gray-500">
-                            {new Date(appointment.date).toLocaleDateString()}
+                            {appointment.date}
                           </span>
                         </div>
 

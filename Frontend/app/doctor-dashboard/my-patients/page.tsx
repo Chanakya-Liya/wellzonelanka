@@ -232,7 +232,7 @@ export default function MyPatients() {
             </div>
           </div>
 
-          {/* Debug Information
+          {/* Debug Information */}
           <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
             <h3 className="font-medium text-yellow-800 mb-2">Debug Information</h3>
             <div className="text-sm text-yellow-700 space-y-1">
@@ -241,8 +241,23 @@ export default function MyPatients() {
               <p>Loading: {loading.toString()}</p>
               <p>Patients Count: {patients.length}</p>
               <p>Search Term: {searchTerm || "None"}</p>
+              {patients.length > 0 && (
+                <div className="mt-2">
+                  <p><strong>Sample Patient Appointment Dates:</strong></p>
+                  {patients.slice(0, 3).map(patient => (
+                    <div key={patient.userId} className="ml-2">
+                      <p>- {patient.userfirstname} {patient.userlastname}:</p>
+                      {patient.appointments.slice(0, 2).map((apt: any, idx: number) => (
+                        <p key={idx} className="ml-4 text-xs">
+                          {apt.date} ({apt.serviceType})
+                        </p>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
-          </div> */}
+          </div>
 
           {/* Search and Filter Bar */}
           <div className="flex justify-between items-center mb-6">

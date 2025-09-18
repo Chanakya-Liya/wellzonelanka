@@ -17,11 +17,33 @@ import {
   Dumbbell
 } from "lucide-react";
 
+interface Appointment {
+  id: string;
+  clientName: string;
+  userEmail: string;
+  sessionType: string;
+  date: string;
+  time: string;
+  duration: string;
+  location: string;
+  status: string;
+  clientAge?: number;
+  goals: string;
+  userfirstname: string;
+  userlastname: string;
+  userphonenumber: string;
+  useradress: string;
+  userdescription: string;
+}
+
 export default function TrainerAppointments() {
   const [trainerName, setTrainerName] = useState("Test Trainer");
   const [trainerEmail, setTrainerEmail] = useState("trainer@gmail.com");
+  const [trainerId, setTrainerId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("today");
   const [searchTerm, setSearchTerm] = useState("");
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     // Get trainer data from localStorage if available
@@ -34,82 +56,86 @@ export default function TrainerAppointments() {
       if (userData.email) {
         setTrainerEmail(userData.email);
       }
+      if (userData.id) {
+        setTrainerId(userData.id);
+      }
     }
   }, []);
+
+  useEffect(() => {
+    if (trainerId) {
+      fetchAppointments();
+    }
+  }, [trainerId]);
+
+  const fetchAppointments = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch(`/api/trainer-appointments/${trainerId}`);
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          // Format appointments data
+          const formattedAppointments = data.appointments.map((apt: any) => ({
+            id: apt.id,
+            clientName: `${apt.userfirstname} ${apt.userlastname}`,
+            userEmail: apt.userEmail,
+            sessionType: apt.sessionType,
+            date: apt.date,
+            time: apt.time,
+            duration: apt.duration || '60 min',
+            location: apt.location || 'TBD',
+            status: apt.status.toLowerCase(),
+            clientAge: apt.clientAge,
+            goals: apt.goals || 'General Fitness',
+            userfirstname: apt.userfirstname,
+            userlastname: apt.userlastname,
+            userphonenumber: apt.userphonenumber,
+            useradress: apt.useradress,
+            userdescription: apt.userdescription
+          }));
+          
+          setAppointments(formattedAppointments);
+        }
+      } else {
+        console.error('Failed to fetch appointments');
+      }
+    } catch (error) {
+      console.error('Error fetching appointments:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleLogout = () => {
     localStorage.removeItem('currentUser');
     window.location.href = '/auth/login';
   };
 
-  // Mock appointments data
-  const appointments = [
-    {
-      id: 1,
-      clientName: "John Smith",
-      clientEmail: "john.smith@email.com",
-      sessionType: "Personal Training",
-      date: "2025-09-16",
-      time: "9:00 AM",
-      duration: "60 min",
-      location: "Gym Floor A",
-      status: "confirmed",
-      clientAge: 28,
-      goals: "Weight Loss, Muscle Building"
-    },
-    {
-      id: 2,
-      clientName: "Maria Garcia",
-      clientEmail: "maria.garcia@email.com",
-      sessionType: "Strength Training",
-      date: "2025-09-16",
-      time: "11:00 AM",
-      duration: "45 min",
-      location: "Weight Room",
-      status: "confirmed",
-      clientAge: 32,
-      goals: "Strength Building"
-    },
-    {
-      id: 3,
-      clientName: "David Wilson",
-      clientEmail: "david.wilson@email.com",
-      sessionType: "Cardio Training",
-      date: "2025-09-17",
-      time: "2:00 PM",
-      duration: "30 min",
-      location: "Cardio Zone",
-      status: "pending",
-      clientAge: 25,
-      goals: "Endurance, Weight Loss"
-    },
-    {
-      id: 4,
-      clientName: "Sarah Johnson",
-      clientEmail: "sarah.johnson@email.com",
-      sessionType: "Weight Loss Program",
-      date: "2025-09-18",
-      time: "4:00 PM",
-      duration: "60 min",
-      location: "Training Studio",
-      status: "confirmed",
-      clientAge: 29,
-      goals: "Weight Loss, Toning"
-    },
-    {
-      id: 5,
-      clientName: "Mike Brown",
-      clientEmail: "mike.brown@email.com",
-      sessionType: "HIIT Training",
-      date: "2025-09-15",
-      time: "10:00 AM",
-      duration: "45 min",
-      location: "Functional Area",
-      status: "completed",
-      clientAge: 35,
-      goals: "Fat Loss, Conditioning"
+  const updateAppointmentStatus = async (appointmentId: string, newStatus: string) => {
+    try {
+      const response = await fetch(`/api/trainer-appointments/${trainerId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          appointmentId,
+          status: newStatus
+        })
+      });
+
+      if (response.ok) {
+        // Refresh appointments after update
+        fetchAppointments();
+      } else {
+        console.error('Failed to update appointment status');
+      }
+    } catch (error) {
+      console.error('Error updating appointment:', error);
     }
-  ];
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -256,7 +282,12 @@ export default function TrainerAppointments() {
 
             {/* Appointments Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {filteredAppointments.length === 0 ? (
+              {loading ? (
+                <div className="col-span-full text-center py-12">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-cyan-600 mx-auto"></div>
+                  <p className="text-gray-500 mt-4">Loading appointments...</p>
+                </div>
+              ) : filteredAppointments.length === 0 ? (
                 <div className="col-span-full text-center py-12">
                   <Calendar className="w-12 h-12 text-gray-300 mx-auto mb-4" />
                   <p className="text-gray-500">No appointments found</p>
@@ -271,8 +302,10 @@ export default function TrainerAppointments() {
                         </div>
                         <div>
                           <h3 className="font-semibold text-gray-900">{appointment.clientName}</h3>
-                          <p className="text-sm text-gray-500">{appointment.clientEmail}</p>
-                          <p className="text-xs text-gray-500">Age: {appointment.clientAge}</p>
+                          <p className="text-sm text-gray-500">{appointment.userEmail}</p>
+                          {appointment.clientAge && (
+                            <p className="text-xs text-gray-500">Age: {appointment.clientAge}</p>
+                          )}
                         </div>
                       </div>
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(appointment.status)}`}>
@@ -307,12 +340,36 @@ export default function TrainerAppointments() {
                         <span className="text-sm text-gray-600">{appointment.goals}</span>
                       </div>
 
+                      <div className="border-t border-gray-100 pt-3">
+                        <span className="text-sm font-medium text-gray-700">Contact: </span>
+                        <span className="text-sm text-gray-600">{appointment.userphonenumber}</span>
+                      </div>
+
+                      {appointment.userdescription && (
+                        <div className="border-t border-gray-100 pt-3">
+                          <span className="text-sm font-medium text-gray-700">Notes: </span>
+                          <span className="text-sm text-gray-600">{appointment.userdescription}</span>
+                        </div>
+                      )}
+
                       <div className="flex space-x-2 mt-4">
-                        <button className="flex-1 px-3 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 transition-colors text-sm font-medium">
-                          View Details
+                        <button 
+                          onClick={() => updateAppointmentStatus(appointment.id, 'Confirmed')}
+                          className="flex-1 px-3 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 transition-colors text-sm font-medium"
+                        >
+                          Confirm
                         </button>
-                        <button className="px-3 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium">
-                          Reschedule
+                        <button 
+                          onClick={() => updateAppointmentStatus(appointment.id, 'Completed')}
+                          className="flex-1 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
+                        >
+                          Complete
+                        </button>
+                        <button 
+                          onClick={() => updateAppointmentStatus(appointment.id, 'Cancelled')}
+                          className="px-3 py-2 border border-red-300 text-red-700 rounded-lg hover:bg-red-50 transition-colors text-sm font-medium"
+                        >
+                          Cancel
                         </button>
                       </div>
                     </div>

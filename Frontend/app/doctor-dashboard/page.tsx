@@ -14,7 +14,16 @@ import {
   Activity,
   Search
 } from "lucide-react";
-import { getDoctorAppointmentStats, getDoctorUpcomingAppointments, Appointment } from "../../lib/services/appointmentService";
+import { 
+  getDoctorAppointments, 
+  getDoctorTodayAppointments, 
+  getDoctorUpcomingAppointments, 
+  getDoctorPastAppointments,
+  getDoctorAppointmentStats,
+  getAllAppointments,
+  Appointment 
+} from "../../lib/services/appointmentService";
+import { getTodayString } from "../../lib/utils/dateUtils";
 
 export default function DoctorDashboard() {
   const [doctorName, setDoctorName] = useState("Test Doctor");
@@ -56,10 +65,14 @@ export default function DoctorDashboard() {
             
             // Fetch real data from Firebase
             try {
+              console.log('🔍 Fetching dashboard data for doctorId:', userData.id);
               const [statsData, upcomingAppointments] = await Promise.all([
                 getDoctorAppointmentStats(userData.id),
                 getDoctorUpcomingAppointments(userData.id)
               ]);
+              
+              console.log('📊 Stats data:', statsData);
+              console.log('📅 Upcoming appointments:', upcomingAppointments);
               
               setStats(statsData);
               setUpcomingSessions(upcomingAppointments.slice(0, 5)); // Show only first 5 upcoming sessions
@@ -67,6 +80,39 @@ export default function DoctorDashboard() {
               console.error('Error fetching dashboard data:', error);
               // Keep default values on error
             }
+          }
+        } else {
+          // Simulate doctor login for testing
+          console.log('🧪 No user in localStorage, simulating doctor login...');
+          const testDoctorId = 'eNRqpc8os8MBgoBe9vKi';
+          const testDoctorData = {
+            id: testDoctorId,
+            firstName: 'Test',
+            lastName: 'Doctor',
+            email: 'doctor@gmail.com'
+          };
+          
+          localStorage.setItem('currentUser', JSON.stringify(testDoctorData));
+          setDoctorId(testDoctorId);
+          setDoctorName('Test Doctor');
+          setDoctorEmail('doctor@gmail.com');
+          
+          // Fetch real data from Firebase
+          try {
+            console.log('🔍 Fetching dashboard data for simulated doctorId:', testDoctorId);
+            const [statsData, upcomingAppointments] = await Promise.all([
+              getDoctorAppointmentStats(testDoctorId),
+              getDoctorUpcomingAppointments(testDoctorId)
+            ]);
+            
+            console.log('📊 Stats data:', statsData);
+            console.log('📅 Upcoming appointments:', upcomingAppointments);
+            
+            setStats(statsData);
+            setUpcomingSessions(upcomingAppointments.slice(0, 5)); // Show only first 5 upcoming sessions
+          } catch (error) {
+            console.error('Error fetching dashboard data:', error);
+            // Keep default values on error
           }
         }
       } catch (error) {
@@ -150,6 +196,17 @@ export default function DoctorDashboard() {
           <div className="text-right">
             <p className="text-sm text-gray-500">Today's Date</p>
             <p className="font-semibold text-gray-900">{currentDate}</p>
+          </div>
+        </div>
+
+        {/* Debug Information */}
+        <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+          <h3 className="font-medium text-yellow-800 mb-2">Debug Information</h3>
+          <div className="text-sm text-yellow-700 space-y-1">
+            <p>Doctor ID: {doctorId || "Not set"}</p>
+            <p>Loading: {loading.toString()}</p>
+            <p>Upcoming Sessions Count: {upcomingSessions.length}</p>
+            <p>Stats: {JSON.stringify(stats)}</p>
           </div>
         </div>
 
@@ -258,7 +315,10 @@ export default function DoctorDashboard() {
                           <div className="text-sm text-gray-900">
                             {new Date(session.date).toLocaleDateString() === new Date().toLocaleDateString() ? 'Today' : 'Upcoming'}
                           </div>
-                          <div className="text-sm text-gray-500">{new Date(session.date).toLocaleDateString()}</div>
+                                                    <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                            {session.date === getTodayString() ? 'Today' : 'Upcoming'}
+                          </span>
+                          <div className="text-sm text-gray-500">{session.date}</div>
                         </td>
                         <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
                           {session.time}

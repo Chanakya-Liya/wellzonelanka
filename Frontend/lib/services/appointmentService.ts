@@ -10,9 +10,11 @@ import {
   doc, 
   updateDoc, 
   deleteDoc,
-  Timestamp 
+  serverTimestamp,
+  Timestamp
 } from 'firebase/firestore';
 import { db } from '../firebase';
+import { getTodayString } from '../utils/dateUtils';
 
 export interface AppointmentData {
   date: string;
@@ -137,8 +139,7 @@ export const getDoctorTodayAppointments = async (doctorId: string): Promise<Appo
   try {
     console.log('🔍 getDoctorTodayAppointments called with doctorId:', doctorId);
     
-    const today = new Date();
-    const todayString = today.toISOString().split('T')[0]; // YYYY-MM-DD format
+    const todayString = getTodayString();
     
     console.log('📅 Today string for comparison:', todayString);
     
@@ -178,8 +179,7 @@ export const getDoctorUpcomingAppointments = async (doctorId: string): Promise<A
   try {
     console.log('🔍 getDoctorUpcomingAppointments called with doctorId:', doctorId);
     
-    const today = new Date();
-    const todayString = today.toISOString().split('T')[0]; // YYYY-MM-DD format
+    const todayString = getTodayString();
     
     console.log('📅 Today string for comparison:', todayString);
     
@@ -225,8 +225,7 @@ export const getDoctorPastAppointments = async (doctorId: string): Promise<Appoi
   try {
     console.log('🔍 getDoctorPastAppointments called with doctorId:', doctorId);
     
-    const today = new Date();
-    const todayString = today.toISOString().split('T')[0]; // YYYY-MM-DD format
+    const todayString = getTodayString();
     
     console.log('📅 Today string for comparison:', todayString);
     
@@ -478,31 +477,62 @@ export const deleteAppointment = async (appointmentId: string): Promise<void> =>
 // Get appointment statistics for doctor dashboard
 export const getDoctorAppointmentStats = async (doctorId: string) => {
   try {
+    console.log('📊 Getting appointment stats for doctorId:', doctorId);
+    
     const today = new Date();
     const todayString = today.toISOString().split('T')[0];
     
+    console.log('📅 Today string:', todayString);
+    
     // Get all appointments for this doctor
     const allAppointments = await getDoctorAppointments(doctorId);
+    console.log('📋 Total appointments found:', allAppointments.length);
     
     // Get today's appointments
     const todayAppointments = allAppointments.filter(apt => apt.date === todayString);
+    console.log('📅 Today appointments:', todayAppointments.length);
     
     // Get new bookings (appointments created in last 7 days)
     const lastWeek = new Date();
     lastWeek.setDate(lastWeek.getDate() - 7);
-    const newBookings = allAppointments.filter(apt => 
-      apt.createdAt && apt.createdAt.toDate() >= lastWeek
-    );
+    console.log('📅 Last week cutoff:', lastWeek.toISOString());
+    
+    // Handle different date formats for createdAt
+    const newBookings = allAppointments.filter(apt => {
+      if (!apt.createdAt) return false;
+      
+      let createdDate;
+      try {
+        if (typeof apt.createdAt === 'string') {
+          createdDate = new Date(apt.createdAt);
+        } else if (apt.createdAt.toDate && typeof apt.createdAt.toDate === 'function') {
+          createdDate = apt.createdAt.toDate();
+        } else {
+          // Fallback for any other format
+          createdDate = new Date(apt.createdAt.seconds * 1000); // Firestore Timestamp
+        }
+        
+        return createdDate >= lastWeek;
+      } catch (error) {
+        console.error('Error parsing createdAt date:', error);
+        return false;
+      }
+    });
+    console.log('📊 New bookings (last 7 days):', newBookings.length);
     
     // Get unique patients count
     const uniquePatients = new Set(allAppointments.map(apt => apt.userId)).size;
+    console.log('👥 Unique patients:', uniquePatients);
     
-    return {
+    const stats = {
       totalPatients: uniquePatients,
       newBookings: newBookings.length,
       todaySessions: todayAppointments.length,
       profileViews: 1 // You might want to implement this separately
     };
+    
+    console.log('✅ Final stats:', stats);
+    return stats;
   } catch (error) {
     console.error('Error fetching appointment stats:', error);
     throw error;

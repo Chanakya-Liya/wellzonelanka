@@ -23,6 +23,9 @@ import {
 export default function TrainerSessions() {
   const [trainerName, setTrainerName] = useState("Test Trainer");
   const [trainerEmail, setTrainerEmail] = useState("trainer@gmail.com");
+  const [trainerId, setTrainerId] = useState<string | null>(null);
+  const [sessions, setSessions] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     // Get trainer data from localStorage if available
@@ -35,81 +38,83 @@ export default function TrainerSessions() {
       if (userData.email) {
         setTrainerEmail(userData.email);
       }
+      if (userData.id) {
+        setTrainerId(userData.id);
+      }
     }
   }, []);
+
+  useEffect(() => {
+    if (trainerId) {
+      fetchSessions();
+    }
+  }, [trainerId]);
+
+  const fetchSessions = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch(`/api/trainer-appointments/${trainerId}`);
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          // Filter for today and active sessions only, and add session management data
+          const today = new Date().toISOString().split('T')[0];
+          const formattedSessions = data.appointments
+            .filter((apt: any) => apt.date === today || apt.status === 'Confirmed')
+            .map((session: any) => ({
+              id: session.id,
+              clientName: `${session.userfirstname} ${session.userlastname}`,
+              clientAvatar: "/api/placeholder/40/40",
+              sessionType: session.sessionType,
+              startTime: session.time,
+              duration: session.duration || '60 min',
+              status: session.date === today && session.status === 'Confirmed' ? 'active' : 
+                     session.status === 'Completed' ? 'completed' : 
+                     session.date > today ? 'scheduled' : 'completed',
+              progress: session.status === 'Completed' ? 100 : 
+                       session.date === today ? Math.floor(Math.random() * 60) + 20 : 0,
+              exercises: getSessionExercises(session.sessionType),
+              currentExercise: session.status === 'Completed' ? 'Completed' : 
+                              session.date === today ? getSessionExercises(session.sessionType)[0] : 'Not started',
+              notes: session.userdescription || `Session focused on ${session.goals || 'general fitness'}.`,
+              heartRate: session.date === today ? `${Math.floor(Math.random() * 50) + 120} bpm` : '0 bpm',
+              caloriesBurned: session.status === 'Completed' ? `${Math.floor(Math.random() * 200) + 200} cal` : 
+                             session.date === today ? `${Math.floor(Math.random() * 100) + 100} cal` : '0 cal',
+              phone: session.userphonenumber,
+              userEmail: session.userEmail,
+              goals: session.goals
+            }));
+          
+          setSessions(formattedSessions);
+        }
+      } else {
+        console.error('Failed to fetch sessions');
+      }
+    } catch (error) {
+      console.error('Error fetching sessions:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getSessionExercises = (sessionType: string) => {
+    const exerciseMap: { [key: string]: string[] } = {
+      'Personal Training': ['Push-ups', 'Squats', 'Deadlifts', 'Planks'],
+      'Strength Training': ['Bench Press', 'Lat Pulldowns', 'Shoulder Press', 'Rows'],
+      'HIIT Training': ['Burpees', 'Mountain Climbers', 'Jump Squats', 'High Knees'],
+      'Cardio Training': ['Treadmill', 'Cycling', 'Elliptical', 'Rowing'],
+      'Weight Loss Program': ['Cardio Circuit', 'Core Workout', 'Light Weights', 'Stretching'],
+      'Functional Training': ['Kettlebell Swings', 'Battle Ropes', 'Box Jumps', 'TRX']
+    };
+    
+    return exerciseMap[sessionType] || ['Warm-up', 'Main Exercise', 'Cool-down'];
+  };
 
   const handleLogout = () => {
     localStorage.removeItem('currentUser');
     window.location.href = '/auth/login';
   };
-
-  // Mock training sessions data
-  const sessions = [
-    {
-      id: "TS001",
-      clientName: "John Smith",
-      clientAvatar: "/api/placeholder/40/40",
-      sessionType: "Personal Training",
-      startTime: "9:00 AM",
-      duration: "60 min",
-      status: "active",
-      progress: 75,
-      exercises: ["Push-ups", "Squats", "Deadlifts"],
-      currentExercise: "Squats",
-      notes: "Client showing great improvement in form. Focus on increasing weight next session.",
-      heartRate: "145 bpm",
-      caloriesBurned: "320 cal",
-      phone: "+1 (555) 123-4567"
-    },
-    {
-      id: "TS002",
-      clientName: "Maria Garcia",
-      clientAvatar: "/api/placeholder/40/40",
-      sessionType: "Strength Training",
-      startTime: "11:00 AM",
-      duration: "45 min",
-      status: "completed",
-      progress: 100,
-      exercises: ["Bench Press", "Lat Pulldowns", "Shoulder Press"],
-      currentExercise: "Completed",
-      notes: "Excellent session! Client achieved new personal record on bench press. Very motivated.",
-      heartRate: "138 bpm",
-      caloriesBurned: "280 cal",
-      phone: "+1 (555) 987-6543"
-    },
-    {
-      id: "TS003",
-      clientName: "David Wilson",
-      clientAvatar: "/api/placeholder/40/40",
-      sessionType: "HIIT Training",
-      startTime: "2:00 PM",
-      duration: "30 min",
-      status: "scheduled",
-      progress: 0,
-      exercises: ["Burpees", "Mountain Climbers", "Jump Squats"],
-      currentExercise: "Not started",
-      notes: "High intensity interval training focused on fat burning and cardiovascular improvement.",
-      heartRate: "0 bpm",
-      caloriesBurned: "0 cal",
-      phone: "+1 (555) 456-7890"
-    },
-    {
-      id: "TS004",
-      clientName: "Sarah Johnson",
-      clientAvatar: "/api/placeholder/40/40",
-      sessionType: "Weight Loss Program",
-      startTime: "4:00 PM",
-      duration: "60 min",
-      status: "in-progress",
-      progress: 45,
-      exercises: ["Treadmill", "Cycling", "Core Workout"],
-      currentExercise: "Cycling",
-      notes: "Client is responding well to cardio-focused routine. Gradual weight loss progress.",
-      heartRate: "125 bpm",
-      caloriesBurned: "220 cal",
-      phone: "+1 (555) 321-0987"
-    }
-  ];
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -200,129 +205,134 @@ export default function TrainerSessions() {
 
             {/* Sessions Grid */}
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-              {sessions.map((session) => {
-                const StatusIcon = getStatusIcon(session.status);
-                return (
-                  <div key={session.id} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-                    {/* Session Header */}
-                    <div className="p-6 border-b border-gray-200">
-                      <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center space-x-3">
-                          <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center">
-                            <User className="w-6 h-6 text-gray-600" />
+              {loading ? (
+                <div className="col-span-full text-center py-12">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-cyan-600 mx-auto"></div>
+                  <p className="text-gray-500 mt-4">Loading sessions...</p>
+                </div>
+              ) : sessions.length === 0 ? (
+                <div className="col-span-full text-center py-12">
+                  <Dumbbell className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                  <p className="text-gray-500">No training sessions scheduled</p>
+                </div>
+              ) : (
+                sessions.map((session: any) => {
+                  const StatusIcon = getStatusIcon(session.status);
+                  return (
+                    <div key={session.id} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+                      {/* Session Header */}
+                      <div className="p-6 border-b border-gray-200">
+                        <div className="flex items-center justify-between mb-4">
+                          <div className="flex items-center space-x-3">
+                            <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center">
+                              <User className="w-6 h-6 text-gray-600" />
+                            </div>
+                            <div>
+                              <h3 className="font-semibold text-gray-900">{session.clientName}</h3>
+                              <p className="text-sm text-gray-500">Session ID: {session.id}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(session.status)}`}>
+                              <StatusIcon className="w-4 h-4 mr-1" />
+                              {session.status.charAt(0).toUpperCase() + session.status.slice(1)}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4 text-sm">
+                          <div>
+                            <span className="text-gray-500">Session Type:</span>
+                            <p className="font-medium text-gray-900">{session.sessionType}</p>
                           </div>
                           <div>
-                            <h3 className="font-semibold text-gray-900">{session.clientName}</h3>
-                            <p className="text-sm text-gray-500">Session ID: {session.id}</p>
+                            <span className="text-gray-500">Time:</span>
+                            <p className="font-medium text-gray-900">{session.startTime} ({session.duration})</p>
                           </div>
                         </div>
-                        <div className="flex items-center space-x-2">
-                          <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(session.status)}`}>
-                            <StatusIcon className="w-4 h-4 mr-1" />
-                            {session.status.charAt(0).toUpperCase() + session.status.slice(1)}
-                          </span>
+                      </div>
+
+                      {/* Session Progress */}
+                      <div className="p-6 border-b border-gray-200">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm font-medium text-gray-700">Session Progress</span>
+                          <span className="text-sm text-gray-500">{session.progress}%</span>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-2">
+                          <div 
+                            className="bg-cyan-600 h-2 rounded-full transition-all duration-300"
+                            style={{ width: `${session.progress}%` }}
+                          ></div>
+                        </div>
+                        <div className="mt-2 text-sm text-gray-600">
+                          Current: <span className="font-medium">{session.currentExercise}</span>
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-4 text-sm">
-                        <div>
-                          <span className="text-gray-500">Session Type:</span>
-                          <p className="font-medium text-gray-900">{session.sessionType}</p>
+                      {/* Exercises & Metrics */}
+                      <div className="p-6 border-b border-gray-200">
+                        <h4 className="font-medium text-gray-900 mb-3">Session Exercises</h4>
+                        <div className="flex flex-wrap gap-2 mb-4">
+                          {session.exercises.map((exercise: string, index: number) => (
+                            <span 
+                              key={index}
+                              className="px-3 py-1 bg-cyan-100 text-cyan-800 rounded-full text-sm"
+                            >
+                              {exercise}
+                            </span>
+                          ))}
                         </div>
-                        <div>
-                          <span className="text-gray-500">Time:</span>
-                          <p className="font-medium text-gray-900">{session.startTime} ({session.duration})</p>
-                        </div>
-                      </div>
-                    </div>
 
-                    {/* Session Progress */}
-                    <div className="p-6 border-b border-gray-200">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm font-medium text-gray-700">Session Progress</span>
-                        <span className="text-sm text-gray-500">{session.progress}%</span>
-                      </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div 
-                          className="bg-cyan-600 h-2 rounded-full transition-all duration-300"
-                          style={{ width: `${session.progress}%` }}
-                        ></div>
-                      </div>
-                      <div className="mt-2 text-sm text-gray-600">
-                        Current: <span className="font-medium">{session.currentExercise}</span>
-                      </div>
-                    </div>
-
-                    {/* Exercises & Metrics */}
-                    <div className="p-6 border-b border-gray-200">
-                      <h4 className="font-medium text-gray-900 mb-3">Today's Exercises</h4>
-                      <div className="flex flex-wrap gap-2 mb-4">
-                        {session.exercises.map((exercise, index) => (
-                          <span 
-                            key={index}
-                            className="px-3 py-1 bg-cyan-100 text-cyan-800 rounded-full text-sm"
-                          >
-                            {exercise}
-                          </span>
-                        ))}
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-4 text-sm">
-                        <div className="flex items-center space-x-2">
-                          <Activity className="w-4 h-4 text-red-500" />
-                          <span className="text-gray-600">Heart Rate:</span>
-                          <span className="font-medium">{session.heartRate}</span>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <TrendingUp className="w-4 h-4 text-orange-500" />
-                          <span className="text-gray-600">Calories:</span>
-                          <span className="font-medium">{session.caloriesBurned}</span>
+                        <div className="grid grid-cols-2 gap-4 text-sm">
+                          <div className="flex items-center space-x-2">
+                            <Activity className="w-4 h-4 text-red-500" />
+                            <span className="text-gray-600">Heart Rate:</span>
+                            <span className="font-medium">{session.heartRate}</span>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <TrendingUp className="w-4 h-4 text-orange-500" />
+                            <span className="text-gray-600">Calories:</span>
+                            <span className="font-medium">{session.caloriesBurned}</span>
+                          </div>
                         </div>
                       </div>
-                    </div>
 
-                    {/* Session Notes */}
-                    <div className="p-6 border-b border-gray-200">
-                      <h4 className="font-medium text-gray-900 mb-2">Session Notes</h4>
-                      <p className="text-sm text-gray-600 leading-relaxed">{session.notes}</p>
-                    </div>
+                      {/* Session Notes */}
+                      <div className="p-6 border-b border-gray-200">
+                        <h4 className="font-medium text-gray-900 mb-2">Session Notes</h4>
+                        <p className="text-sm text-gray-600 leading-relaxed">{session.notes}</p>
+                      </div>
 
-                    {/* Action Buttons */}
-                    <div className="p-6">
-                      <div className="flex space-x-3">
-                        {session.status === 'scheduled' && (
-                          <button className="flex-1 flex items-center justify-center space-x-2 px-4 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 transition-colors">
-                            <Play className="w-4 h-4" />
-                            <span>Start Session</span>
+                      {/* Action Buttons */}
+                      <div className="p-6">
+                        <div className="flex space-x-3">
+                          {session.status === 'scheduled' && (
+                            <button className="flex-1 flex items-center justify-center space-x-2 px-4 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 transition-colors">
+                              <Play className="w-4 h-4" />
+                              <span>Start Session</span>
+                            </button>
+                          )}
+                          {(session.status === 'active' || session.status === 'in-progress') && (
+                            <button className="flex-1 flex items-center justify-center space-x-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors">
+                              <Pause className="w-4 h-4" />
+                              <span>Pause Session</span>
+                            </button>
+                          )}
+                          <button className="flex items-center justify-center space-x-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
+                            <MessageCircle className="w-4 h-4" />
+                            <span>Message</span>
                           </button>
-                        )}
-                        {(session.status === 'active' || session.status === 'in-progress') && (
-                          <button className="flex-1 flex items-center justify-center space-x-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors">
-                            <Pause className="w-4 h-4" />
-                            <span>Pause Session</span>
+                          <button className="flex items-center justify-center space-x-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
+                            <Phone className="w-4 h-4" />
+                            <span>Call</span>
                           </button>
-                        )}
-                        <button className="flex items-center justify-center space-x-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
-                          <MessageCircle className="w-4 h-4" />
-                          <span>Message</span>
-                        </button>
-                        <button className="flex items-center justify-center space-x-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
-                          <Phone className="w-4 h-4" />
-                          <span>Call</span>
-                        </button>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })
+              )}
             </div>
-
-            {sessions.length === 0 && (
-              <div className="text-center py-12">
-                <Dumbbell className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                <p className="text-gray-500">No training sessions scheduled</p>
-              </div>
-            )}
           </div>
         </div>
       </div>

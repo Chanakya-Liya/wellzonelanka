@@ -41,6 +41,21 @@ interface Trainer {
   availableHours?: string;
 }
 
+// Get specialty display name
+const getSpecialtyDisplay = (specialty: string) => {
+  const specialtyMap: { [key: string]: string } = {
+    "weight-training": "Weight Training",
+    "cardio-fitness": "Cardio Fitness", 
+    "yoga": "Yoga",
+    "nutrition": "Nutrition",
+    "pilates": "Pilates",
+    "crossfit": "CrossFit",
+    "sports-specific": "Sports-Specific",
+    "functional-fitness": "Functional Fitness",
+  };
+  return specialtyMap[specialty] || specialty;
+};
+
 export default function Trainers() {
   const [trainers, setTrainers] = useState<Trainer[]>([]);
   const [loading, setLoading] = useState(true);
@@ -48,21 +63,7 @@ export default function Trainers() {
   const [selectedSpecialty, setSelectedSpecialty] = useState("all");
   const [selectedFilter, setSelectedFilter] = useState("all");
   const [error, setError] = useState<string | null>(null);
-
-  // Get specialty display name
-  const getSpecialtyDisplay = (specialty: string) => {
-    const specialtyMap: { [key: string]: string } = {
-      "weight-training": "Weight Training",
-      "cardio-fitness": "Cardio Fitness", 
-      "yoga": "Yoga",
-      "nutrition": "Nutrition",
-      "pilates": "Pilates",
-      "crossfit": "CrossFit",
-      "sports-specific": "Sports-Specific",
-      "functional-fitness": "Functional Fitness",
-    };
-    return specialtyMap[specialty] || specialty;
-  };
+  const [selectedTrainer, setSelectedTrainer] = useState<Trainer | null>(null);
 
   // Fetch trainers from database
   useEffect(() => {
@@ -317,61 +318,92 @@ export default function Trainers() {
               )}
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-12">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 mb-12">
               {filteredTrainers.map((trainer) => (
-                <Card key={trainer.id} className="overflow-hidden hover:shadow-xl transition-all duration-300 bg-white border-0 shadow-md">
-                  {/* Trainer Background */}
-                  <div className="relative h-56 bg-gradient-to-br from-[#06CBF2] via-[#06CBF2] to-[#0BB5D8]">
+                <Card key={trainer.id} className="overflow-hidden hover:shadow-xl transition-all duration-300 bg-white border-0 shadow-lg rounded-2xl group">
+                  {/* Image Section (Top) */}
+                  <div className="relative h-64 overflow-hidden">
+                    {/* Trainer Photo - Using a placeholder gym/fitness image */}
+                    <div 
+                      className="w-full h-full bg-cover bg-center transform group-hover:scale-105 transition-transform duration-500"
+                      style={{
+                        backgroundImage: `linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.1)), url('/images/trainer-${parseInt(trainer.id) % 3 + 1}.jpg'), url('/images/gym-background.jpg')`
+                      }}
+                    >
+                      {/* Fallback content when image doesn't load */}
+                      <div className="w-full h-full bg-gradient-to-br from-slate-800 via-slate-700 to-slate-600 flex items-center justify-center">
+                        <div className="text-center text-white">
+                          <div className="w-20 h-20 bg-white/20 backdrop-blur-sm rounded-full mx-auto mb-3 flex items-center justify-center border-2 border-white/30">
+                            <span className="text-white text-2xl font-bold">
+                              {trainer.firstName.charAt(0)}{trainer.lastName.charAt(0)}
+                            </span>
+                          </div>
+                          <p className="text-sm font-medium opacity-90">{trainer.firstName} {trainer.lastName}</p>
+                          <p className="text-xs opacity-70">{getSpecialtyDisplay(trainer.specialization)} Trainer</p>
+                        </div>
+                      </div>
+                    </div>
+                    
                     {/* Rating Badge */}
-                    <div className="absolute top-3 right-3 bg-black/70 backdrop-blur-sm px-2 py-1 rounded-full flex items-center">
-                      <Star className="h-3 w-3 text-yellow-400 fill-yellow-400 mr-1" />
-                      <span className="text-white text-xs font-medium">
+                    <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-full flex items-center shadow-lg">
+                      <Star className="h-3.5 w-3.5 text-yellow-500 fill-yellow-500 mr-1" />
+                      <span className="text-gray-900 text-sm font-semibold">
                         {trainer.rating?.toFixed(1) || '4.9'}
+                      </span>
+                      <span className="text-gray-600 text-xs ml-1">
+                        ({trainer.reviewCount || '25+'})
                       </span>
                     </div>
                   </div>
 
-                  <CardContent className="p-4">
-                    {/* Trainer Name */}
-                    <h3 className="text-lg font-bold mb-1 text-gray-900">
-                      {trainer.firstName} {trainer.lastName}
-                    </h3>
-                    
-                    {/* Experience */}
-                    <p className="text-sm text-gray-600 mb-3">
-                      {trainer.experience} years experience
-                    </p>
-
-                    {/* Specializations */}
-                    <div className="flex flex-wrap gap-1 mb-3">
-                      <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-800 hover:bg-blue-200">
-                        {getSpecialtyDisplay(trainer.specialization)}
-                      </Badge>
-                      {trainer.certifications && (
-                        <Badge variant="secondary" className="text-xs bg-green-100 text-green-800 hover:bg-green-200">
-                          <Award className="h-3 w-3 mr-1" />
-                          Certified
-                        </Badge>
-                      )}
+                  {/* Information Section (Bottom) */}
+                  <CardContent className="p-6">
+                    {/* Trainer Name & Experience */}
+                    <div className="mb-4">
+                      <h3 className="text-xl font-bold text-gray-900 mb-1 leading-tight">
+                        {trainer.firstName} {trainer.lastName}
+                      </h3>
+                      <p className="text-sm text-gray-600 font-medium">
+                        {trainer.experience} Years Experience
+                      </p>
                     </div>
 
-                    {/* Stats Row */}
-                    <div className="flex items-center justify-between text-xs text-gray-600 mb-4">
-                      <div className="flex items-center">
-                        <Calendar className="h-3 w-3 mr-1" />
-                        <span>Available</span>
+                    {/* Specializations as Pills */}
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      <span className="inline-block bg-gray-100 text-gray-700 text-xs font-medium px-3 py-1.5 rounded-full">
+                        {getSpecialtyDisplay(trainer.specialization)}
+                      </span>
+                      {trainer.certifications && (
+                        <span className="inline-block bg-gray-100 text-gray-700 text-xs font-medium px-3 py-1.5 rounded-full">
+                          Rehabilitation
+                        </span>
+                      )}
+                      <span className="inline-block bg-gray-100 text-gray-700 text-xs font-medium px-3 py-1.5 rounded-full">
+                        Low Impact Training
+                      </span>
+                    </div>
+
+                    {/* Availability & Price Row */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center text-gray-600">
+                        <Calendar className="h-4 w-4 mr-2 text-gray-500" />
+                        <span className="text-sm">Mon-Fri, 8AM-6PM</span>
                       </div>
-                      <span className="text-sm text-gray-900">
-                        {trainer.hourlyRate || 'Contact for rates'}
+                      <span className="font-semibold text-gray-900 text-sm">
+                        {trainer.hourlyRate || 'Rs. 2,500/hour'}
                       </span>
                     </div>
                   </CardContent>
 
-                  <CardFooter className="p-4 pt-0">
-                    <Link href={`/trainers/${trainer.id}`} className="flex items-center justify-center w-full text-black hover:text-gray-700 transition-colors">
-                      <span className="text-sm font-medium">View Profile</span>
-                      <ArrowRight className="ml-2 h-4 w-4" />
-                    </Link>
+                  {/* Action Button */}
+                  <CardFooter className="px-6 pb-6 pt-0">
+                    <button 
+                      onClick={() => setSelectedTrainer(trainer)}
+                      className="flex items-center justify-center w-full bg-gray-50 hover:bg-gray-100 text-gray-700 hover:text-gray-900 transition-all duration-200 text-sm font-medium py-3 rounded-lg group border border-gray-200"
+                    >
+                      View Profile
+                      <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                    </button>
                   </CardFooter>
                 </Card>
               ))}
@@ -379,7 +411,192 @@ export default function Trainers() {
           )}
         </div>
       </section>
+      
+      {/* Trainer Profile Modal */}
+      {selectedTrainer && (
+        <TrainerModal
+          trainer={selectedTrainer}
+          onClose={() => setSelectedTrainer(null)}
+        />
+      )}
+      
       <Footer />
+    </div>
+  );
+}
+
+// Trainer Modal Component
+interface TrainerModalProps {
+  trainer: Trainer;
+  onClose: () => void;
+}
+
+function TrainerModal({ trainer, onClose }: TrainerModalProps) {
+  const handleBackdropClick = (e: React.MouseEvent) => {
+    if (e.target === e.currentTarget) {
+      onClose();
+    }
+  };
+
+  return (
+    <div 
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+      onClick={handleBackdropClick}
+    >
+      <div className="bg-white rounded-2xl max-w-6xl w-full max-h-[90vh] overflow-y-auto shadow-2xl transform transition-all duration-300 scale-100">
+        <div className="flex flex-col md:flex-row min-h-[600px]">
+          {/* Left Column - Profile Summary Card */}
+          <div className="w-full md:w-80 bg-gray-50 p-8 rounded-l-2xl md:rounded-r-none rounded-r-2xl">
+            {/* Close Button */}
+            <div className="flex justify-end mb-6">
+              <button
+                onClick={onClose}
+                className="text-gray-400 hover:text-gray-600 text-2xl font-light w-8 h-8 flex items-center justify-center hover:bg-gray-200 rounded-full transition-colors"
+              >
+                ×
+              </button>
+            </div>
+
+            {/* Profile Image */}
+            <div className="text-center mb-8">
+              <div className="relative w-28 h-28 mx-auto mb-4 rounded-full overflow-hidden shadow-xl">
+                <div className="w-full h-full bg-gradient-to-br from-slate-700 to-slate-600 flex items-center justify-center">
+                  <span className="text-white text-2xl font-bold">
+                    {trainer.firstName.charAt(0)}{trainer.lastName.charAt(0)}
+                  </span>
+                </div>
+              </div>
+              
+              {/* Name */}
+              <h3 className="text-2xl font-bold text-gray-900 mb-2 leading-tight">
+                {trainer.firstName} {trainer.lastName}
+              </h3>
+              
+              {/* Rating */}
+              <div className="flex items-center justify-center mb-3">
+                <Star className="h-5 w-5 text-yellow-500 fill-yellow-500 mr-2" />
+                <span className="font-bold text-gray-800 text-lg">{trainer.rating?.toFixed(1) || '4.9'}</span>
+                <span className="text-gray-500 text-sm ml-2">({trainer.reviewCount || '254'} reviews)</span>
+              </div>
+              
+              {/* Experience */}
+              <p className="text-gray-600 font-semibold text-base">
+                {trainer.experience} Years Experience
+              </p>
+            </div>
+
+            {/* Specializations */}
+            <div className="mb-8">
+              <div className="flex flex-wrap gap-2 justify-center">
+                <span className="bg-white text-gray-700 px-4 py-2 rounded-full text-sm font-semibold shadow-sm border border-gray-200">
+                  Weight Training
+                </span>
+                <span className="bg-white text-gray-700 px-4 py-2 rounded-full text-sm font-semibold shadow-sm border border-gray-200">
+                  Rehabilitation
+                </span>
+                <span className="bg-white text-gray-700 px-4 py-2 rounded-full text-sm font-semibold shadow-sm border border-gray-200">
+                  Nutrition
+                </span>
+                <span className="bg-white text-gray-700 px-4 py-2 rounded-full text-sm font-semibold shadow-sm border border-gray-200">
+                  Calisthenics
+                </span>
+              </div>
+            </div>
+
+            {/* Details */}
+            <div className="space-y-5 mb-8">
+              <div className="flex justify-between items-center py-1">
+                <span className="text-gray-600 font-semibold">Price:</span>
+                <span className="font-bold text-gray-900 text-lg">{trainer.hourlyRate || 'Rs. 2,500/hour'}</span>
+              </div>
+              
+              <div className="flex justify-between items-center py-1">
+                <span className="text-gray-600 font-semibold">Availability:</span>
+                <span className="text-gray-900 font-medium">Mon-Fri, 8AM-6PM</span>
+              </div>
+              
+              <div className="flex justify-between items-center py-1">
+                <span className="text-gray-600 font-semibold">Languages:</span>
+                <span className="text-gray-900 font-medium">English, Sinhala, Tamil</span>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="space-y-4">
+              <button 
+                onClick={() => {
+                  // Store trainer data and navigate to appointment page
+                  localStorage.setItem('selectedTrainer', JSON.stringify(trainer));
+                  window.location.href = '/trainers/trainer-appointment';
+                }}
+                className="w-full bg-blue-600 text-white py-4 px-6 rounded-xl hover:bg-blue-700 transition-colors duration-300 font-bold text-base shadow-lg"
+              >
+                📅 Book Session
+              </button>
+              
+              <button className="w-full border border-gray-300 text-gray-700 py-4 px-6 rounded-xl hover:bg-gray-100 transition-colors duration-300 font-semibold text-base shadow-sm">
+                ⭐ Rate Trainer
+              </button>
+            </div>
+          </div>
+
+          {/* Right Column - Detailed About Section */}
+          <div className="flex-1 p-10 bg-white rounded-r-2xl md:rounded-l-none rounded-l-2xl">
+            {/* About Section */}
+            <div className="mb-10">
+              <h2 className="text-3xl font-bold text-gray-900 mb-6">About {trainer.firstName} {trainer.lastName}</h2>
+              <p className="text-gray-600 leading-relaxed text-lg mb-6">
+                Certified personal trainer with {trainer.experience} years of experience specializing in weight training, 
+                rehabilitation, nutrition and calisthenics. I help clients achieve their fitness goals through 
+                personalized training programs and nutritional guidance. My approach focuses on building 
+                sustainable habits for long-term success.
+              </p>
+            </div>
+
+            {/* Certifications Section */}
+            <div className="mb-10">
+              <h3 className="text-2xl font-bold text-gray-900 mb-6">Certifications</h3>
+              <div className="space-y-4">
+                <div className="flex items-center py-2">
+                  <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center mr-4">
+                    <span className="text-green-600 font-bold text-sm">✓</span>
+                  </div>
+                  <span className="text-gray-700 text-lg">Certified Personal Trainer (CPT)</span>
+                </div>
+                <div className="flex items-center py-2">
+                  <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center mr-4">
+                    <span className="text-green-600 font-bold text-sm">✓</span>
+                  </div>
+                  <span className="text-gray-700 text-lg">Rehabilitation Specialist</span>
+                </div>
+                <div className="flex items-center py-2">
+                  <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center mr-4">
+                    <span className="text-green-600 font-bold text-sm">✓</span>
+                  </div>
+                  <span className="text-gray-700 text-lg">Sports Nutrition Certification</span>
+                </div>
+                <div className="flex items-center py-2">
+                  <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center mr-4">
+                    <span className="text-green-600 font-bold text-sm">✓</span>
+                  </div>
+                  <span className="text-gray-700 text-lg">First Aid and CPR Certified</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Education Section */}
+            <div className="mb-8">
+              <h3 className="text-2xl font-bold text-gray-900 mb-6">Education</h3>
+              <div className="flex items-center py-2">
+                <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-4">
+                  <span className="text-blue-600 text-lg">🎓</span>
+                </div>
+                <span className="text-gray-700 text-lg">Bachelor's Degree in Sports Science, University of Colombo.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

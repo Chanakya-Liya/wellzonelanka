@@ -63,6 +63,24 @@ export default function MySessions() {
             // Fetch sessions (confirmed appointments) based on active tab
             await loadSessions(userData.id, activeTab);
           }
+        } else {
+          // Simulate doctor login for testing
+          console.log('🧪 No user in localStorage, simulating doctor login...');
+          const testDoctorId = 'eNRqpc8os8MBgoBe9vKi';
+          const testDoctorData = {
+            id: testDoctorId,
+            firstName: 'Test',
+            lastName: 'Doctor',
+            email: 'doctor@gmail.com'
+          };
+          
+          localStorage.setItem('currentUser', JSON.stringify(testDoctorData));
+          setDoctorId(testDoctorId);
+          setDoctorName('Test Doctor');
+          setDoctorEmail('doctor@gmail.com');
+          
+          // Fetch sessions data
+          await loadSessions(testDoctorId, activeTab);
         }
       } catch (error) {
         console.error('Error initializing sessions:', error);
@@ -206,6 +224,28 @@ export default function MySessions() {
             </div>
           </div>
 
+          {/* Debug Information */}
+          <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <h3 className="font-medium text-yellow-800 mb-2">Debug Information</h3>
+            <div className="text-sm text-yellow-700 space-y-1">
+              <p>Doctor ID: {doctorId || "Not set"}</p>
+              <p>Active Tab: {activeTab}</p>
+              <p>Loading: {loading.toString()}</p>
+              <p>Sessions Count: {sessions.length}</p>
+              <p>Current Date: {currentDate}</p>
+              {sessions.length > 0 && (
+                <div className="mt-2">
+                  <p><strong>Sample Session Dates:</strong></p>
+                  {sessions.slice(0, 3).map(session => (
+                    <p key={session.id} className="ml-2">
+                      - {session.userfirstname}: {session.date} (Status: {session.status})
+                    </p>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
           {/* Search and Filter Bar */}
           <div className="flex justify-between items-center mb-6">
             <div className="flex items-center space-x-4">
@@ -302,7 +342,7 @@ export default function MySessions() {
                             {session.serviceType}
                           </span>
                           <span className="text-xs text-gray-500">
-                            {new Date(session.date).toLocaleDateString()}
+                            {session.date}
                           </span>
                         </div>
 
