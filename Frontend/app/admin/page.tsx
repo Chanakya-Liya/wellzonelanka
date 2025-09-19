@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { Search, MoreVertical, Download, User, Dumbbell, Users } from 'lucide-react';
+import { Search, MoreVertical, Download, User, Dumbbell, Users, Link2 } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
@@ -109,9 +109,13 @@ export default function AdminPage() {
     console.log('Downloading PDF for:', id);
   };
 
-  // Add navigation handlers
+  // Update the navigation handler
   const handleNavigation = (path: string) => {
-    router.push(`/admin/${path}`);
+    if (path === 'add-exercises') {
+      router.push('/admin/add-exercises');
+    } else {
+      router.push(`/admin/${path}`);
+    }
   };
 
   return (
@@ -143,24 +147,12 @@ export default function AdminPage() {
             </button>
             <button 
               onClick={() => handleNavigation('add-exercises')}
-              className="w-full flex items-center gap-3 px-4 py-2 text-left rounded-lg hover:bg-blue-50 hover:text-blue-600 transition-colors"
+              className="w-full flex text-gray-800 items-center gap-3 px-4 py-2 text-left rounded-lg hover:bg-blue-50 hover:text-blue-600 transition-colors"
             >
-              <svg 
-                className="w-5 h-5"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-              >
-                <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path>
-                <line x1="4" y1="22" x2="4" y2="15"></line>
-              </svg>
+              <Link2 className="w-5 h-5" />
               Exercises
             </button>
-            <button 
-              onClick={() => handleNavigation('new-users')}
-              className="w-full flex items-center gap-3 px-4 py-2 text-left rounded-lg bg-blue-50 text-blue-600"
-            >
+            <button className="w-full flex items-center gap-3 px-4 py-2 text-left rounded-lg bg-blue-50 text-blue-600">
               <Users className="w-5 h-5" />
               New Users
             </button>
