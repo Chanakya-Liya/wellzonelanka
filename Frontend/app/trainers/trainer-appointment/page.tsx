@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { ArrowLeft, ChevronLeft, ChevronRight, Clock, Star } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
+import { withAuth } from '@/hooks/useAuth';
 // We'll need to create trainer appointment service similar to doctor appointments
 // import { createTrainerAppointment, TrainerAppointmentData } from '../../../lib/services/trainerAppointmentService';
 
@@ -43,7 +44,7 @@ interface ClientDetails {
   experience: string;
 }
 
-export default function TrainerBookingAppointment() {
+function TrainerBookingAppointment() {
   const router = useRouter();
   const [trainer, setTrainer] = useState<Trainer | null>(null);
   const [loading, setLoading] = useState(true);
@@ -696,3 +697,9 @@ export default function TrainerBookingAppointment() {
     </>
   );
 }
+
+// Export the protected component
+export default withAuth(TrainerBookingAppointment, {
+  redirectTo: '/auth/login',
+  showLoadingMessage: 'Please log in to book trainer appointments.'
+});

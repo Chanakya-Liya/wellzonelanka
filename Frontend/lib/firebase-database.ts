@@ -28,6 +28,43 @@ interface User {
   isApproved: boolean;
 }
 
+interface Appointment {
+  id?: string;
+  date: string;
+  doctorId: string;
+  doctorName: string;
+  serviceType: string;
+  status: string;
+  time: string;
+  updatedAt: any;
+  userEmail: string;
+  userId: string;
+  useradress: string;
+  userdescription: string;
+  userfirstname: string;
+  userlastname: string;
+  userphonenumber: string;
+}
+
+interface TrainerAppointment {
+  id?: string;
+  createdAt: any;
+  date: string;
+  doctorId: string;
+  doctorName: string;
+  serviceType: string;
+  status: string;
+  time: string;
+  updatedAt: any;
+  userEmail: string;
+  userId: string;
+  useradress: string;
+  userdescription: string;
+  userfirstname: string;
+  userlastname: string;
+  userphonenumber: string;
+}
+
 class FirebaseDataService {
   private usersCollection = 'users';
 
@@ -284,6 +321,89 @@ class FirebaseDataService {
       console.log('User approved:', userId);
     } catch (error) {
       console.error('Error approving user:', error);
+      throw error;
+    }
+  }
+
+  // Appointment management methods
+  async getUserAppointments(userEmail: string): Promise<Appointment[]> {
+    try {
+      const appointmentsRef = collection(db, 'appointments');
+      const q = query(appointmentsRef, where('userEmail', '==', userEmail));
+      const querySnapshot = await getDocs(q);
+      
+      const appointments: Appointment[] = [];
+      querySnapshot.forEach((doc) => {
+        appointments.push({ id: doc.id, ...doc.data() } as Appointment);
+      });
+      
+      return appointments;
+    } catch (error) {
+      console.error('Error fetching user appointments:', error);
+      throw error;
+    }
+  }
+
+  async getUserTrainerAppointments(userEmail: string): Promise<TrainerAppointment[]> {
+    try {
+      const trainerAppointmentsRef = collection(db, 'trainers-appointment');
+      const q = query(trainerAppointmentsRef, where('userEmail', '==', userEmail));
+      const querySnapshot = await getDocs(q);
+      
+      const trainerAppointments: TrainerAppointment[] = [];
+      querySnapshot.forEach((doc) => {
+        trainerAppointments.push({ id: doc.id, ...doc.data() } as TrainerAppointment);
+      });
+      
+      return trainerAppointments;
+    } catch (error) {
+      console.error('Error fetching user trainer appointments:', error);
+      throw error;
+    }
+  }
+
+  async getAllUserAppointments(userEmail: string): Promise<{
+    appointments: Appointment[];
+    trainerAppointments: TrainerAppointment[];
+  }> {
+    try {
+      const [appointments, trainerAppointments] = await Promise.all([
+        this.getUserAppointments(userEmail),
+        this.getUserTrainerAppointments(userEmail)
+      ]);
+
+      return {
+        appointments,
+        trainerAppointments
+      };
+    } catch (error) {
+      console.error('Error fetching all user appointments:', error);
+      throw error;
+    }
+  }
+
+  // Enhanced user profile update with additional fields
+  async updateUserProfile(userId: string, updateData: {
+    firstName?: string;
+    lastName?: string;
+    email?: string;
+    phone?: string;
+    bio?: string;
+  }): Promise<void> {
+    try {
+      const docRef = doc(db, this.usersCollection, userId);
+      const updatePayload: any = {};
+      
+      if (updateData.firstName) updatePayload.firstName = updateData.firstName;
+      if (updateData.lastName) updatePayload.lastName = updateData.lastName;
+      if (updateData.email) updatePayload.email = updateData.email;
+      if (updateData.phone) updatePayload.phone = updateData.phone;
+      if (updateData.bio) updatePayload.bio = updateData.bio;
+      
+      await updateDoc(docRef, updatePayload);
+      console.log('User profile updated in Firebase:', userId);
+    } catch (error) {
+      console.error('Error updating user profile:', error);
       throw error;
     }
   }

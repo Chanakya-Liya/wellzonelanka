@@ -20,10 +20,10 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     while (retries > 0) {
       try {
         // Get all trainer appointments
-        const appointmentsRef = collection(db, 'trainer_appointments');
+        const appointmentsRef = collection(db, 'trainers-appointment');
         const q = query(
           appointmentsRef,
-          where('trainerId', '==', trainerId)
+          where('doctorId', '==', trainerId)
         );
 
         const querySnapshot = await getDocs(q);
@@ -59,11 +59,11 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         const createdDate = apt.createdAt?.toDate?.()?.toISOString?.()?.split('T')[0] || today;
         return createdDate === today;
       }).length,
-      confirmedAppointments: appointments.filter(apt => apt.status === 'Confirmed').length,
-      pendingAppointments: appointments.filter(apt => apt.status === 'Pending').length,
-      completedAppointments: appointments.filter(apt => apt.status === 'Completed').length,
-      cancelledAppointments: appointments.filter(apt => apt.status === 'Cancelled').length,
-      uniqueClients: new Set(appointments.map(apt => apt.userId)).size,
+      confirmedAppointments: appointments.filter(apt => apt.status.toLowerCase() === 'confirmed').length,
+      pendingAppointments: appointments.filter(apt => apt.status.toLowerCase() === 'pending').length,
+      completedAppointments: appointments.filter(apt => apt.status.toLowerCase() === 'completed').length,
+      cancelledAppointments: appointments.filter(apt => apt.status.toLowerCase() === 'cancelled').length,
+      uniqueClients: new Set(appointments.map(apt => apt.userEmail)).size,
       upcomingAppointments: appointments.filter(apt => apt.date > today),
       pastAppointments: appointments.filter(apt => apt.date < today),
       thisWeekAppointments: appointments.filter(apt => {
@@ -88,6 +88,17 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     // Get today's sessions
     const todaysSessions = appointments
       .filter(apt => apt.date === today)
+      .map(apt => ({
+        id: apt.id,
+        clientName: `${apt.userfirstname || ''} ${apt.userlastname || ''}`.trim(),
+        sessionType: apt.serviceType || apt.sessionType || 'Training Session',
+        time: apt.time,
+        duration: apt.duration || '60 min',
+        status: apt.status,
+        userfirstname: apt.userfirstname,
+        userlastname: apt.userlastname,
+        userEmail: apt.userEmail
+      }))
       .sort((a, b) => {
         const timeA = parseInt(a.time.replace(/[^\d]/g, ''));
         const timeB = parseInt(b.time.replace(/[^\d]/g, ''));

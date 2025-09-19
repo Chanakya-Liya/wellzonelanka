@@ -18,8 +18,9 @@ import { ChatDialog } from "@/components/chatbot/ChatDialog";
 import { ChatButton } from "@/components/chatbot/ChatButton";
 import Sidebar from "@/app/Sidebar";
 import { Footer } from "../Footer";
+import { withAuth } from "@/hooks/useAuth";
 
-export default function ServicesPage() {
+function ServicesPage() {
   const services = [
     {
       icon: <Spine className="h-12 w-12 text-black" />,
@@ -401,3 +402,9 @@ export default function ServicesPage() {
     </div>
   );
 }
+
+// Export the protected component
+export default withAuth(ServicesPage, {
+  redirectTo: '/auth/login',
+  showLoadingMessage: 'Please log in to access our medical services.'
+});

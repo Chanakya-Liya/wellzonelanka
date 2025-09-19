@@ -2,6 +2,9 @@
 
 import React, { useState, useEffect } from "react";
 import Navbar from "@/components/Navbar";
+import { withAuth } from "@/hooks/useAuth";
+import { firebaseDataService } from "@/lib/firebase-database";
+import { toast } from "sonner";
 import { 
   User, 
   Edit, 
@@ -10,113 +13,169 @@ import {
   Clock,
   MapPin,
   Phone,
-  Mail
+  Mail,
+  Save,
+  X,
+  ChevronDown,
+  ChevronUp
 } from "lucide-react";
 
 interface Appointment {
   id: string;
   doctorName: string;
-  specialty: string;
+  serviceType: string;
   date: string;
   time: string;
-  location: string;
-  status: 'confirmed' | 'pending' | 'cancelled';
-  type: 'consultation' | 'followup' | 'checkup';
+  status: 'Confirmed' | 'Pending' | 'Cancelled' | 'Completed';
+  type?: 'consultation' | 'followup' | 'checkup';
+  userEmail: string;
+  userId: string;
+  useradress: string;
+  userdescription: string;
+  userfirstname: string;
+  userlastname: string;
+  userphonenumber: string;
+  doctorId: string;
 }
 
-export default function UserProfile() {
-  const [userData, setUserData] = useState({
-    firstName: "Sarah",
-    lastName: "Johnson",
-    email: "sarah.johnson@email.com",
-    phone: "+1 (555) 123-4567",
-    bio: "Health enthusiast focused on maintaining an active lifestyle and preventive care.",
-    membershipType: "Premium Member"
+interface UserData {
+  id?: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  bio: string;
+  membershipType: string;
+}
+
+function UserProfile() {
+  const [userData, setUserData] = useState<UserData>({
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    bio: "",
+    membershipType: "Standard Member"
   });
   
   const [isEditing, setIsEditing] = useState(false);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [expandedAppointment, setExpandedAppointment] = useState<string | null>(null);
 
   useEffect(() => {
-    // Load user data from localStorage
-    const currentUser = localStorage.getItem('currentUser');
-    if (currentUser) {
-      const user = JSON.parse(currentUser);
-      setUserData(prev => ({
-        ...prev,
-        firstName: user.firstName || prev.firstName,
-        lastName: user.lastName || prev.lastName,
-        email: user.email || prev.email,
-        phone: user.phone || prev.phone
-      }));
-    }
-
-    // Fetch user appointments
-    fetchUserAppointments();
+    loadUserData();
   }, []);
 
-  const fetchUserAppointments = async () => {
+  const loadUserData = async () => {
     try {
       setLoading(true);
-      // TODO: Replace with actual API call to fetch appointments
-      // For now, using mock data
-      const mockAppointments: Appointment[] = [
-        {
-          id: "1",
-          doctorName: "Dr. Michael Chen",
-          specialty: "Cardiology",
-          date: "2025-09-20",
-          time: "10:00 AM",
-          location: "Wellzone Medical Center",
-          status: "confirmed",
-          type: "consultation"
-        },
-        {
-          id: "2",
-          doctorName: "Dr. Emily Rodriguez",
-          specialty: "Dermatology", 
-          date: "2025-09-25",
-          time: "2:30 PM",
-          location: "Wellzone Skin Clinic",
-          status: "pending",
-          type: "checkup"
-        },
-        {
-          id: "3",
-          doctorName: "Dr. James Wilson",
-          specialty: "General Medicine",
-          date: "2025-09-18",
-          time: "11:15 AM",
-          location: "Wellzone Medical Center",
-          status: "confirmed",
-          type: "followup"
-        }
-      ];
       
-      setAppointments(mockAppointments);
+      // Load user data from localStorage
+      const currentUserData = localStorage.getItem('currentUser');
+      if (!currentUserData) {
+        toast.error('No user data found');
+        return;
+      }
+
+      const user = JSON.parse(currentUserData);
+      setCurrentUser(user);
+      
+      // Fetch user from database to get complete profile
+      const dbUser = await firebaseDataService.getUserByEmail(user.email);
+      if (dbUser) {
+        setUserData({
+          id: dbUser.id,
+          firstName: dbUser.firstName || '',
+          lastName: dbUser.lastName || '',
+          email: dbUser.email || '',
+          phone: (dbUser as any).phone || '',
+          bio: (dbUser as any).bio || '',
+          membershipType: "Premium Member"
+        });
+      }
+
+      // Fetch user appointments
+      await fetchUserAppointments(user.email);
     } catch (error) {
-      console.error('Error fetching appointments:', error);
+      console.error('Error loading user data:', error);
+      toast.error('Failed to load user data');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSaveProfile = () => {
-    // Save profile changes
-    const currentUser = localStorage.getItem('currentUser');
-    if (currentUser) {
-      const user = JSON.parse(currentUser);
+  const fetchUserAppointments = async (userEmail: string) => {
+    try {
+      const { appointments: doctorAppointments, trainerAppointments } = 
+        await firebaseDataService.getAllUserAppointments(userEmail);
+      
+      // Combine both types of appointments
+      const allAppointments: Appointment[] = [
+        ...doctorAppointments.map(apt => ({
+          ...apt,
+          id: apt.id || '',
+          status: apt.status as 'Confirmed' | 'Pending' | 'Cancelled' | 'Completed',
+          type: 'consultation' as const
+        })),
+        ...trainerAppointments.map(apt => ({
+          ...apt,
+          id: apt.id || '',
+          status: apt.status as 'Confirmed' | 'Pending' | 'Cancelled' | 'Completed',
+          type: 'followup' as const,
+          serviceType: apt.serviceType || 'Personal Training'
+        }))
+      ];
+      
+      // Sort by date
+      allAppointments.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      
+      setAppointments(allAppointments);
+    } catch (error) {
+      console.error('Error fetching appointments:', error);
+      toast.error('Failed to load appointments');
+    }
+  };
+
+  const handleSaveProfile = async () => {
+    if (!currentUser || !userData.id) {
+      toast.error('Unable to save profile - user not found');
+      return;
+    }
+
+    try {
+      setSaving(true);
+      
+      // Update profile in Firebase
+      await firebaseDataService.updateUserProfile(userData.id, {
+        firstName: userData.firstName,
+        lastName: userData.lastName,
+        email: userData.email,
+        phone: userData.phone,
+        bio: userData.bio
+      });
+
+      // Update localStorage
       const updatedUser = {
-        ...user,
+        ...currentUser,
         firstName: userData.firstName,
         lastName: userData.lastName,
         email: userData.email,
         phone: userData.phone
       };
       localStorage.setItem('currentUser', JSON.stringify(updatedUser));
+      setCurrentUser(updatedUser);
+      
+      setIsEditing(false);
+      toast.success('Profile updated successfully!');
+    } catch (error) {
+      console.error('Error saving profile:', error);
+      toast.error('Failed to update profile. Please try again.');
+    } finally {
+      setSaving(false);
     }
-    setIsEditing(false);
   };
 
   const handleLogout = () => {
@@ -125,12 +184,17 @@ export default function UserProfile() {
   };
 
   const getStatusColor = (status: string) => {
-    switch (status) {
+    switch (status.toLowerCase()) {
       case 'confirmed': return 'bg-green-100 text-green-800';
       case 'pending': return 'bg-yellow-100 text-yellow-800';
       case 'cancelled': return 'bg-red-100 text-red-800';
+      case 'completed': return 'bg-blue-100 text-blue-800';
       default: return 'bg-gray-100 text-gray-800';
     }
+  };
+
+  const toggleAppointmentDetails = (appointmentId: string) => {
+    setExpandedAppointment(expandedAppointment === appointmentId ? null : appointmentId);
   };
 
   return (
@@ -196,12 +260,42 @@ export default function UserProfile() {
                       <h3 className="text-lg font-semibold text-gray-900">Personal Details</h3>
                       <p className="text-gray-600 text-sm mt-1">Update your personal information</p>
                     </div>
-                    <button
-                      onClick={() => isEditing ? handleSaveProfile() : setIsEditing(true)}
-                      className="px-4 py-2 bg-cyan-500 text-white rounded-lg hover:bg-cyan-600 transition-colors text-sm font-medium"
-                    >
-                      {isEditing ? 'Save' : 'Edit'}
-                    </button>
+                    <div className="flex space-x-2">
+                      {isEditing && (
+                        <button
+                          onClick={() => {
+                            setIsEditing(false);
+                            loadUserData(); // Reload original data
+                          }}
+                          className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors text-sm font-medium flex items-center space-x-2"
+                        >
+                          <X className="w-4 h-4" />
+                          <span>Cancel</span>
+                        </button>
+                      )}
+                      <button
+                        onClick={() => isEditing ? handleSaveProfile() : setIsEditing(true)}
+                        disabled={saving}
+                        className="px-4 py-2 bg-cyan-500 text-white rounded-lg hover:bg-cyan-600 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                      >
+                        {saving ? (
+                          <>
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                            <span>Saving...</span>
+                          </>
+                        ) : isEditing ? (
+                          <>
+                            <Save className="w-4 h-4" />
+                            <span>Save</span>
+                          </>
+                        ) : (
+                          <>
+                            <Edit className="w-4 h-4" />
+                            <span>Edit</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
                   </div>
                 </div>
 
@@ -341,11 +435,11 @@ export default function UserProfile() {
                             <div className="flex items-center space-x-3 mb-2">
                               <h4 className="font-semibold text-gray-900">{appointment.doctorName}</h4>
                               <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(appointment.status)}`}>
-                                {appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1)}
+                                {appointment.status}
                               </span>
                             </div>
                             
-                            <p className="text-gray-600 mb-3">{appointment.specialty}</p>
+                            <p className="text-gray-600 mb-3">{appointment.serviceType}</p>
                             
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                               <div className="flex items-center space-x-2">
@@ -358,17 +452,83 @@ export default function UserProfile() {
                               </div>
                               <div className="flex items-center space-x-2">
                                 <MapPin className="w-4 h-4 text-gray-400" />
-                                <span className="text-gray-600">{appointment.location}</span>
+                                <span className="text-gray-600">{appointment.useradress || 'Address not specified'}</span>
                               </div>
                             </div>
                           </div>
                           
                           <div className="ml-4">
-                            <button className="px-3 py-1 text-cyan-600 hover:bg-cyan-50 rounded-lg transition-colors text-sm font-medium">
-                              View Details
+                            <button 
+                              onClick={() => toggleAppointmentDetails(appointment.id)}
+                              className="px-3 py-1 text-cyan-600 hover:bg-cyan-50 rounded-lg transition-colors text-sm font-medium flex items-center space-x-1"
+                            >
+                              <span>{expandedAppointment === appointment.id ? 'Hide Details' : 'View Details'}</span>
+                              {expandedAppointment === appointment.id ? (
+                                <ChevronUp className="w-4 h-4" />
+                              ) : (
+                                <ChevronDown className="w-4 h-4" />
+                              )}
                             </button>
                           </div>
                         </div>
+                        
+                        {/* Expanded Details Section */}
+                        {expandedAppointment === appointment.id && (
+                          <div className="mt-4 pt-4 border-t border-gray-200">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div className="space-y-3">
+                                <h5 className="font-semibold text-gray-900 mb-3">Patient Information</h5>
+                                <div className="flex items-center space-x-2 text-sm">
+                                  <User className="w-4 h-4 text-gray-400" />
+                                  <span className="text-gray-600">
+                                    {appointment.userfirstname} {appointment.userlastname}
+                                  </span>
+                                </div>
+                                <div className="flex items-center space-x-2 text-sm">
+                                  <Mail className="w-4 h-4 text-gray-400" />
+                                  <span className="text-gray-600">{appointment.userEmail}</span>
+                                </div>
+                                <div className="flex items-center space-x-2 text-sm">
+                                  <Phone className="w-4 h-4 text-gray-400" />
+                                  <span className="text-gray-600">{appointment.userphonenumber}</span>
+                                </div>
+                                <div className="flex items-start space-x-2 text-sm">
+                                  <MapPin className="w-4 h-4 text-gray-400 mt-0.5" />
+                                  <span className="text-gray-600">{appointment.useradress}</span>
+                                </div>
+                              </div>
+                              
+                              <div className="space-y-3">
+                                <h5 className="font-semibold text-gray-900 mb-3">Appointment Details</h5>
+                                <div className="text-sm">
+                                  <span className="text-gray-500">Appointment Type:</span>
+                                  <p className="text-gray-900 capitalize">{appointment.type || 'Consultation'}</p>
+                                </div>
+                                <div className="text-sm">
+                                  <span className="text-gray-500">Service:</span>
+                                  <p className="text-gray-900">{appointment.serviceType}</p>
+                                </div>
+                                <div className="text-sm">
+                                  <span className="text-gray-500">Status:</span>
+                                  <p className="text-gray-900">{appointment.status}</p>
+                                </div>
+                                <div className="text-sm">
+                                  <span className="text-gray-500">Doctor/Trainer ID:</span>
+                                  <p className="text-gray-900 font-mono text-xs">{appointment.doctorId}</p>
+                                </div>
+                              </div>
+                            </div>
+                            
+                            {appointment.userdescription && (
+                              <div className="mt-4">
+                                <h5 className="font-semibold text-gray-900 mb-2">Additional Notes</h5>
+                                <p className="text-gray-600 text-sm bg-gray-50 p-3 rounded-lg">
+                                  {appointment.userdescription}
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -381,3 +541,8 @@ export default function UserProfile() {
     </div>
   );
 }
+
+// Wrap with authentication
+export default withAuth(UserProfile, {
+  showLoadingMessage: "Please log in to access your profile and appointments."
+});
