@@ -21,14 +21,14 @@ interface Appointment {
   id: string;
   clientName: string;
   userEmail: string;
-  sessionType: string;
-  date: string;
-  time: string;
+  sessionType: string; // This maps to serviceType in database
+  date: string; // Format: "2025-09-17"
+  time: string; // Format: "5:00PM"
   duration: string;
   location: string;
-  status: string;
+  status: string; // "Confirmed", "Pending", "Cancelled", "Completed"
   clientAge?: number;
-  goals: string;
+  goals: string; // This maps to userdescription
   userfirstname: string;
   userlastname: string;
   userphonenumber: string;
@@ -48,21 +48,29 @@ export default function TrainerAppointments() {
   useEffect(() => {
     // Get trainer data from localStorage if available
     const currentUser = localStorage.getItem('currentUser');
+    console.log('🔍 Raw currentUser from localStorage:', currentUser);
+    
     if (currentUser) {
       const userData = JSON.parse(currentUser);
+      console.log('🔍 Parsed userData:', userData);
+      
       if (userData.firstName && userData.lastName) {
         setTrainerName(`${userData.firstName} ${userData.lastName}`);
       }
       if (userData.email) {
         setTrainerEmail(userData.email);
       }
+      
+      // Use the user ID as trainer ID - they should match for trainers
       if (userData.id) {
         setTrainerId(userData.id);
+        console.log('🔍 Setting trainerId to:', userData.id);
       }
     }
   }, []);
 
   useEffect(() => {
+    console.log('🔍 trainerId changed:', trainerId);
     if (trainerId) {
       fetchAppointments();
     }
@@ -71,31 +79,40 @@ export default function TrainerAppointments() {
   const fetchAppointments = async () => {
     try {
       setLoading(true);
+      console.log('🚀 Fetching appointments for trainerId:', trainerId);
+      
       const response = await fetch(`/api/trainer-appointments/${trainerId}`);
+      console.log('🚀 API response status:', response.status);
       
       if (response.ok) {
         const data = await response.json();
+        console.log('🚀 API response data:', data);
+        
         if (data.success) {
-          // Format appointments data
-          const formattedAppointments = data.appointments.map((apt: any) => ({
-            id: apt.id,
-            clientName: `${apt.userfirstname} ${apt.userlastname}`,
-            userEmail: apt.userEmail,
-            sessionType: apt.sessionType,
-            date: apt.date,
-            time: apt.time,
-            duration: apt.duration || '60 min',
-            location: apt.location || 'TBD',
-            status: apt.status.toLowerCase(),
-            clientAge: apt.clientAge,
-            goals: apt.goals || 'General Fitness',
-            userfirstname: apt.userfirstname,
-            userlastname: apt.userlastname,
-            userphonenumber: apt.userphonenumber,
-            useradress: apt.useradress,
-            userdescription: apt.userdescription
-          }));
+          // Format appointments data to match the database schema
+          const formattedAppointments = data.appointments.map((apt: any) => {
+            console.log('🔄 Processing appointment:', apt);
+            return {
+              id: apt.id,
+              clientName: `${apt.userfirstname} ${apt.userlastname}`,
+              userEmail: apt.userEmail,
+              sessionType: apt.serviceType, // Using serviceType from your schema
+              date: apt.date,
+              time: apt.time,
+              duration: '60 min', // Default duration since it's not in your schema
+              location: 'Gym', // Default location since it's not in your schema
+              status: apt.status.toLowerCase(),
+              clientAge: undefined, // Not in your schema
+              goals: apt.userdescription, // Using userdescription as goals
+              userfirstname: apt.userfirstname,
+              userlastname: apt.userlastname,
+              userphonenumber: apt.userphonenumber,
+              useradress: apt.useradress,
+              userdescription: apt.userdescription
+            };
+          });
           
+          console.log('🔄 Formatted appointments:', formattedAppointments);
           setAppointments(formattedAppointments);
         }
       } else {
@@ -115,6 +132,8 @@ export default function TrainerAppointments() {
 
   const updateAppointmentStatus = async (appointmentId: string, newStatus: string) => {
     try {
+      console.log('🔄 Updating appointment status:', { appointmentId, newStatus, trainerId });
+      
       const response = await fetch(`/api/trainer-appointments/${trainerId}`, {
         method: 'PUT',
         headers: {
@@ -126,14 +145,21 @@ export default function TrainerAppointments() {
         })
       });
 
+      console.log('🔄 Update response status:', response.status);
+      
       if (response.ok) {
+        const result = await response.json();
+        console.log('✅ Update successful:', result);
         // Refresh appointments after update
         fetchAppointments();
       } else {
-        console.error('Failed to update appointment status');
+        const errorData = await response.json();
+        console.error('❌ Failed to update appointment status. Response:', errorData);
+        alert(`Failed to update appointment status: ${errorData.message || 'Unknown error'}`);
       }
     } catch (error) {
-      console.error('Error updating appointment:', error);
+      console.error('❌ Error updating appointment:', error);
+      alert('Error updating appointment. Please try again.');
     }
   };
 

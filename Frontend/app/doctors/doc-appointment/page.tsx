@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { createAppointment, AppointmentData } from '../../../lib/services/appointmentService';
 import { getDoctorReviews, Review as DoctorReview } from '../../../lib/services/reviewService';
+import { withAuth } from '@/hooks/useAuth';
 
 interface Doctor {
   id: string;
@@ -42,7 +43,7 @@ interface PatientDetails {
   description: string;
 }
 
-export default function BookingAppointment() {
+function BookingAppointment() {
   const router = useRouter();
   const [doctor, setDoctor] = useState<Doctor | null>(null);
   const [loading, setLoading] = useState(true);
@@ -662,3 +663,9 @@ export default function BookingAppointment() {
     </>
   );
 }
+
+// Export the protected component
+export default withAuth(BookingAppointment, {
+  redirectTo: '/auth/login',
+  showLoadingMessage: 'Please log in to book doctor appointments.'
+});

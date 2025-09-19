@@ -20,11 +20,11 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
     while (retries > 0) {
       try {
-        // Get all trainer appointments to extract client information
-        const appointmentsRef = collection(db, 'trainer_appointments');
+        // Get all trainer appointments from the correct collection to extract client information
+        const appointmentsRef = collection(db, 'trainers-appointment');
         const q = query(
           appointmentsRef,
-          where('trainerId', '==', trainerId)
+          where('doctorId', '==', trainerId) // Note: using doctorId as it stores trainerId in your schema
         );
 
         const querySnapshot = await getDocs(q);
@@ -76,7 +76,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         
         // Get the most recent appointment
         const sortedAppointments = clientAppointments.sort((a, b) => 
-          new Date(b.createdAt?.toDate?.() || 0).getTime() - new Date(a.createdAt?.toDate?.() || 0).getTime()
+          new Date(b.createdAt?.toDate?.() || b.createdAt || 0).getTime() - new Date(a.createdAt?.toDate?.() || a.createdAt || 0).getTime()
         );
         const latestAppointment = sortedAppointments[0];
         
@@ -101,15 +101,16 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         // Calculate progress (percentage of completed sessions)
         const progress = totalSessions > 0 ? Math.round((completedSessions / totalSessions) * 100) : 0;
         
-        // Create client object
+        // Create client object using the actual database schema
         const client = {
           id: clientId,
           name: `${appointment.userfirstname} ${appointment.userlastname}`,
           email: appointment.userEmail,
           phone: appointment.userphonenumber,
           address: appointment.useradress,
-          joinDate: latestAppointment?.createdAt?.toDate?.()?.toISOString?.()?.split('T')[0] || new Date().toISOString().split('T')[0],
-          goals: appointment.goals || 'General Fitness',
+          joinDate: latestAppointment?.createdAt?.toDate?.()?.toISOString?.()?.split('T')[0] || 
+                   (latestAppointment?.createdAt ? new Date(latestAppointment.createdAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]),
+          goals: appointment.userdescription || 'General Fitness', // Using userdescription as goals
           status,
           totalSessions,
           completedSessions,
@@ -117,17 +118,15 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
           pendingSessions,
           nextSession,
           progress,
-          age: appointment.clientAge || userDetails?.age || null,
+          age: userDetails?.age || null, // Age not in appointment schema
           notes: appointment.userdescription || 'No notes available',
-          // Aggregate session types
-          sessionTypes: [...new Set(clientAppointments.map(apt => apt.sessionType))],
-          // Recent achievements (mock data for now)
-          achievements: completedSessions >= 10 ? ['10+ Sessions Completed'] : 
-                       completedSessions >= 5 ? ['5+ Sessions Completed'] : 
+          // Aggregate session types using serviceType from schema
+          sessionTypes: [...new Set(clientAppointments.map(apt => apt.serviceType))],
+          // Recent achievements based on completed sessions
+          achievements: completedSessions >= 10 ? ['10+ Sessions Completed', 'Dedicated Client'] : 
+                       completedSessions >= 5 ? ['5+ Sessions Completed', 'Regular Attendee'] : 
                        completedSessions >= 1 ? ['First Session Completed'] : [],
-          // Mock fitness data (could be extended with real tracking)
-          currentWeight: null,
-          targetWeight: null,
+          // Last session date
           lastSessionDate: completedSessions > 0 ? 
             clientAppointments
               .filter(apt => apt.status === 'Completed')

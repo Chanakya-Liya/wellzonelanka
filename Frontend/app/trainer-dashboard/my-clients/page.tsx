@@ -74,18 +74,27 @@ export default function TrainerClients() {
   const fetchClients = async () => {
     try {
       setLoading(true);
+      console.log('🔍 Fetching clients for trainerId:', trainerId);
+      
       const response = await fetch(`/api/trainer-clients/${trainerId}`);
+      console.log('🔍 API response status:', response.status);
       
       if (response.ok) {
         const data = await response.json();
+        console.log('🔍 API response data:', data);
+        
         if (data.success) {
+          console.log('✅ Found clients:', data.clients);
           setClients(data.clients);
+        } else {
+          console.error('❌ API returned success: false');
         }
       } else {
-        console.error('Failed to fetch clients');
+        const errorData = await response.json();
+        console.error('❌ Failed to fetch clients. Response:', errorData);
       }
     } catch (error) {
-      console.error('Error fetching clients:', error);
+      console.error('❌ Error fetching clients:', error);
     } finally {
       setLoading(false);
     }
