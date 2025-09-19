@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Video, Calendar, ClipboardList, User } from "lucide-react";
 import { Suspense } from "react";
+import { withAuth } from "@/hooks/useAuth";
 
 function GymDashContent() {
   const searchParams = useSearchParams();
@@ -66,13 +67,17 @@ function GymDashContent() {
   );
 }
 
-export default function GymTrainerPage() {
+function GymTrainerPage() {
   return (
     <Suspense fallback={<div>Loading...</div>}>
       <GymDashContent />
     </Suspense>
   );
 }
+
+export default withAuth(GymTrainerPage, {
+  showLoadingMessage: "Please log in to access your gym trainer dashboard and book training sessions."
+});
 
 interface ServiceCardProps {
   title: string;

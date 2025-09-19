@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, Clock, Calendar, ChevronLeft, ChevronRight } from "lucide-react";
 import { Suspense } from "react";
+import { withAuth } from "@/hooks/useAuth";
 
 interface Trainer {
   id: string;
@@ -558,10 +559,16 @@ function BookAppointmentContent() {
   );
 }
 
-export default function BookAppointmentPage() {
+function BookAppointmentPage() {
   return (
     <Suspense fallback={<div className="flex items-center justify-center min-h-screen">Loading...</div>}>
       <BookAppointmentContent />
     </Suspense>
   );
 }
+
+// Export the protected component
+export default withAuth(BookAppointmentPage, {
+  redirectTo: '/auth/login',
+  showLoadingMessage: 'Please log in to book trainer appointments.'
+});

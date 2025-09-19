@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Video, User, ArrowLeft, Phone, Camera, Mic } from "lucide-react";
 import { Suspense } from "react";
+import { withAuth } from "@/hooks/useAuth";
 
 function VideoSessionContent() {
   const searchParams = useSearchParams();
@@ -205,7 +206,7 @@ function VideoSessionContent() {
   );
 }
 
-export default function VideoSessionPage() {
+function VideoSessionPage() {
   return (
     <Suspense
       fallback={
@@ -218,3 +219,7 @@ export default function VideoSessionPage() {
     </Suspense>
   );
 }
+
+export default withAuth(VideoSessionPage, {
+  showLoadingMessage: "Please log in to access your video training sessions."
+});

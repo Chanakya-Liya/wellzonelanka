@@ -5,8 +5,9 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Footer } from "@/app/Footer";
 import Sidebar from '../Sidebar';
+import { withAuth } from '@/hooks/useAuth';
 
-export default function ServicesPage() {
+function ServicesPage() {
   const [activeTab, setActiveTab] = useState('fitness');
   const [isVisible, setIsVisible] = useState({});
 
@@ -477,3 +478,9 @@ export default function ServicesPage() {
     </div>
   );
 }
+
+// Export the protected component
+export default withAuth(ServicesPage, {
+  redirectTo: '/auth/login',
+  showLoadingMessage: 'Please log in to access our services.'
+});

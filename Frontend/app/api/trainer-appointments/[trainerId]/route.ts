@@ -8,7 +8,8 @@ import {
   addDoc,
   updateDoc,
   deleteDoc,
-  doc 
+  doc,
+  serverTimestamp
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
@@ -49,11 +50,11 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
     while (retries > 0) {
       try {
-        // Get trainer appointments from the trainer_appointments collection
-        const appointmentsRef = collection(db, 'trainer_appointments');
+        // Get trainer appointments from the trainers-appointment collection (note: hyphen not underscore)
+        const appointmentsRef = collection(db, 'trainers-appointment');
         const q = query(
           appointmentsRef,
-          where('trainerId', '==', trainerId),
+          where('doctorId', '==', trainerId), // Note: using doctorId as it stores trainerId in your schema
           orderBy('createdAt', 'desc')
         );
 
@@ -82,8 +83,8 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
           
           // Try without orderBy
           const simpleQuery = query(
-            collection(db, 'trainer_appointments'),
-            where('trainerId', '==', trainerId)
+            collection(db, 'trainers-appointment'),
+            where('doctorId', '==', trainerId) // Note: using doctorId as it stores trainerId in your schema
           );
           
           const simpleSnapshot = await getDocs(simpleQuery);
@@ -141,8 +142,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     }
 
     const appointmentData: TrainerAppointment = {
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
       date: body.date,
       time: body.time,
       trainerId: trainerId,
@@ -220,18 +221,21 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     }
 
     console.log('Updating appointment:', appointmentId, 'for trainer:', trainerId);
+    console.log('Update data:', updateData);
 
     // Add updatedAt timestamp
     const updatedAppointmentData = {
       ...updateData,
-      updatedAt: new Date()
+      updatedAt: serverTimestamp()
     };
+
+    console.log('Final update data:', updatedAppointmentData);
 
     let retries = 3;
 
     while (retries > 0) {
       try {
-        const docRef = doc(db, 'trainer_appointments', appointmentId);
+        const docRef = doc(db, 'trainers-appointment', appointmentId); // Fixed: use correct collection name
         await updateDoc(docRef, updatedAppointmentData);
         break;
       } catch (error: any) {

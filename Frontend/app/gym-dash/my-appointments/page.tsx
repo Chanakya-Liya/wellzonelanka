@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, Clock, User, ArrowLeft, Mail } from "lucide-react";
 import { Suspense } from "react";
+import { withAuth } from "@/hooks/useAuth";
 
 interface Appointment {
   id: string;
@@ -244,10 +245,14 @@ function MyAppointmentsContent() {
   );
 }
 
-export default function MyAppointmentsPage() {
+function MyAppointmentsPage() {
   return (
     <Suspense fallback={<div className="flex items-center justify-center min-h-screen">Loading...</div>}>
       <MyAppointmentsContent />
     </Suspense>
   );
 }
+
+export default withAuth(MyAppointmentsPage, {
+  showLoadingMessage: "Please log in to view and manage your gym appointments."
+});
