@@ -9,6 +9,8 @@ import { ArrowLeft, ArrowRight, Search, Filter, ChevronDown } from "lucide-react
 import { Footer } from "../../Footer";
 import { ChatDialog } from "@/components/chatbot/ChatDialog";
 import { ChatButton } from "@/components/chatbot/ChatButton";
+import { RatingModal, ReviewData } from "@/components/RatingModal";
+import { addReview, getDoctorReviews, getDoctorReviewStats } from "@/lib/services/reviewService";
 
 // Define Doctor Interface
 interface Doctor {
@@ -28,6 +30,7 @@ interface Doctor {
   rating?: number;
   image?: string;
   expertise?: string[];
+  reviewCount?: number;
 }
 
 export default function DoctorsPage() {
@@ -41,6 +44,7 @@ export default function DoctorsPage() {
   const [chatOpen, setChatOpen] = useState(false);
   const [currentSlide, setCurrentSlide] = useState(0);
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
+  const [showRatingModal, setShowRatingModal] = useState(false);
 
   // Fetch doctors from database
   useEffect(() => {
@@ -49,8 +53,11 @@ export default function DoctorsPage() {
         const response = await fetch("/api/doctors");
         const data = await response.json();
         
+        console.log('Doctors API response:', data);
+        
         if (data.success && data.doctors) {
-          const mappedDoctors = data.doctors.map((doctor: any) => {
+          console.log('Starting to fetch review stats for', data.doctors.length, 'doctors');
+          const mappedDoctors = await Promise.all(data.doctors.map(async (doctor: any) => {
             const specializationMap: { [key: string]: string } = {
               'cardiology': 'cardiologist',
               'orthopedic': 'orthopedic',
@@ -59,16 +66,42 @@ export default function DoctorsPage() {
             
             const category = specializationMap[doctor.specialization?.toLowerCase()] || 'all specialists'; // New default category
             
-            return {
-              ...doctor,
-              name: `Dr. ${doctor.firstName} ${doctor.lastName}`,
-              category: category,
-              rating: 4.5 + Math.random() * 0.4,
-              image: doctor.gender === 'female' ? '/images/female-doctor.png' : '/images/doctor-male.png',
-              expertise: getExpertiseBySpecialization(doctor.specialization)
-            };
-          });
+            // Fetch real review stats for each doctor
+            try {
+              console.log(`Fetching review stats for doctor ${doctor.id} (${doctor.firstName} ${doctor.lastName})`);
+              const reviewStats = await getDoctorReviewStats(doctor.id);
+              console.log(`Review stats for ${doctor.id}:`, reviewStats);
+              
+              // Temporary test data to verify display is working
+              const isFirstDoctor = doctor.firstName === 'Saman'; // Test with first doctor
+              const testRating = isFirstDoctor ? 4.5 : reviewStats.averageRating || 0;
+              const testReviewCount = isFirstDoctor ? 12 : reviewStats.totalReviews;
+              
+              return {
+                ...doctor,
+                name: `Dr. ${doctor.firstName} ${doctor.lastName}`,
+                category: category,
+                rating: testRating,
+                reviewCount: testReviewCount,
+                image: doctor.gender === 'female' ? '/images/female-doctor.png' : '/images/doctor-male.png',
+                expertise: getExpertiseBySpecialization(doctor.specialization)
+              };
+            } catch (error) {
+              console.error(`Error fetching reviews for doctor ${doctor.id}:`, error);
+              // Fallback to default values if review fetching fails
+              return {
+                ...doctor,
+                name: `Dr. ${doctor.firstName} ${doctor.lastName}`,
+                category: category,
+                rating: 0,
+                reviewCount: 0,
+                image: doctor.gender === 'female' ? '/images/female-doctor.png' : '/images/doctor-male.png',
+                expertise: getExpertiseBySpecialization(doctor.specialization)
+              };
+            }
+          }));
           
+          console.log('Final mapped doctors with review stats:', mappedDoctors);
           setDoctors(mappedDoctors);
         } else {
           setError('Failed to load doctors');
@@ -115,6 +148,20 @@ export default function DoctorsPage() {
     // You can pass doctor data through URL params or localStorage
     localStorage.setItem('selectedDoctor', JSON.stringify(doctor));
     router.push('/doctors/doc-appointment');
+  };
+
+  // Handle review submission
+  const handleSubmitReview = async (reviewData: ReviewData) => {
+    try {
+      await addReview(reviewData);
+      setShowRatingModal(false);
+      setSelectedDoctor(null);
+      // Optionally refresh doctors list to show updated ratings
+      window.location.reload();
+    } catch (error) {
+      console.error('Error submitting review:', error);
+      throw error;
+    }
   };
 
   // Categories for filter buttons
@@ -309,7 +356,7 @@ export default function DoctorsPage() {
                           </div>
                           <div className="flex items-center text-xs text-gray-600">
                             <span className="mr-1">⭐</span>
-                            <span>{doctor.rating?.toFixed(1)} Rating</span>
+                            <span>{doctor.rating?.toFixed(1) || '0.0'} ({doctor.reviewCount || 0} reviews)</span>
                           </div>
                           <div className="flex items-start text-xs text-gray-600">
                             <span className="mr-1">🩺</span>
@@ -333,7 +380,14 @@ export default function DoctorsPage() {
                         >
                           Book appointment
                         </button>
-                        <button className="px-2 py-1 text-white rounded-full hover:opacity-90 transition-all duration-300 text-xs font-medium flex-1" style={{ backgroundColor: '#4285F4' }}>
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedDoctor(doctor);
+                          }}
+                          className="px-2 py-1 text-white rounded-full hover:opacity-90 transition-all duration-300 text-xs font-medium flex-1" 
+                          style={{ backgroundColor: '#4285F4' }}
+                        >
                           View
                         </button>
                       </div>
@@ -369,6 +423,17 @@ export default function DoctorsPage() {
               doctor={selectedDoctor}
               onClose={() => setSelectedDoctor(null)}
               onBookAppointment={handleBookAppointment}
+              onRateDoctor={() => setShowRatingModal(true)}
+            />
+          )}
+          
+          {showRatingModal && selectedDoctor && (
+            <RatingModal
+              isOpen={showRatingModal}
+              onClose={() => setShowRatingModal(false)}
+              doctorId={selectedDoctor.id}
+              doctorName={selectedDoctor.name || `${selectedDoctor.firstName} ${selectedDoctor.lastName}`}
+              onSubmitReview={handleSubmitReview}
             />
           )}
         </div>
@@ -386,92 +451,150 @@ interface DoctorModalProps {
   doctor: Doctor;
   onClose: () => void;
   onBookAppointment: (doctor: Doctor) => void;
+  onRateDoctor: () => void;
 }
 
-function DoctorModal({ doctor, onClose, onBookAppointment }: DoctorModalProps) {
+function DoctorModal({ doctor, onClose, onBookAppointment, onRateDoctor }: DoctorModalProps) {
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="p-6">
-          <div className="flex justify-between items-start mb-6">
-            <h2 className="text-2xl font-bold text-gray-800">Doctor Details</h2>
-            <button
-              onClick={onClose}
-              className="text-gray-500 hover:text-gray-700"
-            >
-              ✕
-            </button>
-          </div>
-
-          <div className="text-center mb-6">
-            <div className="relative w-24 h-24 mx-auto mb-4 rounded-full overflow-hidden border-4 border-blue-200">
-              <Image
-                src={doctor.image || '/images/doctor-placeholder.png'}
-                alt={`Dr. ${doctor.lastName}`}
-                layout="fill"
-                objectFit="cover"
-                className="rounded-full"
-              />
+      <div className="bg-white rounded-xl max-w-5xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="flex">
+          {/* Left Panel - Profile Card */}
+          <div className="w-80 bg-gray-50 p-6 rounded-l-xl">
+            {/* Close Button */}
+            <div className="flex justify-end mb-4">
+              <button
+                onClick={onClose}
+                className="text-gray-400 hover:text-gray-600 text-xl"
+              >
+                ✕
+              </button>
             </div>
-            <h3 className="text-xl font-semibold text-gray-800 mb-2">
-              {doctor.name}
-            </h3>
-            <p className="text-blue-600 font-medium mb-1">
-              {doctor.specialization}
-            </p>
-            <p className="text-gray-500">
-              {doctor.experience} years of experience
-            </p>
-          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-            <div>
-              <h4 className="font-semibold text-gray-800 mb-2">Contact Information</h4>
-              <p className="text-gray-600 mb-1">📧 {doctor.email}</p>
-              <p className="text-gray-600">🆔 License: {doctor.licenseNumber}</p>
-            </div>
-            <div>
-              <h4 className="font-semibold text-gray-800 mb-2">Rating & Status</h4>
-              <div className="flex items-center mb-1">
-                <div className="flex text-yellow-400 mr-2">
-                  {'★'.repeat(Math.floor(doctor.rating || 4.5))}
-                  {'☆'.repeat(5 - Math.floor(doctor.rating || 4.5))}
-                </div>
-                <span className="text-gray-600">{doctor.rating?.toFixed(1)}</span>
+            {/* Profile Picture */}
+            <div className="text-center mb-6">
+              <div className="relative w-32 h-32 mx-auto mb-4 rounded-full overflow-hidden border-4 border-white shadow-lg">
+                <Image
+                  src={doctor.image || '/images/doctor-placeholder.png'}
+                  alt={`Dr. ${doctor.lastName}`}
+                  layout="fill"
+                  objectFit="cover"
+                  className="rounded-full"
+                />
               </div>
-              <p className="text-gray-600">
-                Status: {doctor.isApproved ? '✅ Approved' : '⏳ Pending'}
+              
+              {/* Name */}
+              <h3 className="text-xl font-bold text-gray-900 mb-2">
+                {doctor.name}
+              </h3>
+              
+              {/* Rating */}
+              <div className="flex items-center justify-center mb-2">
+                <span className="text-yellow-400 text-lg mr-2">⭐</span>
+                <span className="font-semibold text-gray-700">{doctor.rating?.toFixed(1) || '0.0'}</span>
+                <span className="text-gray-500 text-sm ml-1">({doctor.reviewCount || 0} reviews)</span>
+              </div>
+              
+              {/* Experience */}
+              <p className="text-gray-600 font-medium">
+                {doctor.experience} Years Experience
               </p>
             </div>
-          </div>
 
-          <div className="mb-6">
-            <h4 className="font-semibold text-gray-800 mb-2">Areas of Expertise</h4>
-            <div className="flex flex-wrap gap-2">
-              {doctor.expertise?.map((area, index) => (
-                <span
-                  key={index}
-                  className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm"
-                >
-                  {area}
-                </span>
-              ))}
+            {/* Specialties Tags */}
+            <div className="mb-6">
+              <div className="flex flex-wrap gap-2 justify-center">
+                {doctor.expertise?.map((area, index) => (
+                  <span
+                    key={index}
+                    className="bg-gray-200 text-gray-700 px-3 py-1 rounded-full text-sm font-medium"
+                  >
+                    {area}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            {/* Price & Details */}
+            <div className="space-y-4 mb-6">
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600 font-medium">Price:</span>
+                <span className="font-bold text-gray-900">Rs. 2,500/hour</span>
+              </div>
+              
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600 font-medium">Availability:</span>
+                <span className="text-gray-900">Mon-Fri, 8AM-6PM</span>
+              </div>
+              
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600 font-medium">Languages:</span>
+                <span className="text-gray-900">English, Sinhala, Tamil</span>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="space-y-3">
+              <button 
+                onClick={() => onBookAppointment(doctor)}
+                className="w-full bg-blue-600 text-white py-3 px-6 rounded-lg hover:bg-blue-700 transition-colors duration-300 font-medium flex items-center justify-center"
+              >
+                📅 Book Appointment
+              </button>
+              
+              <button 
+                onClick={onRateDoctor}
+                className="w-full border border-gray-300 text-gray-700 py-3 px-6 rounded-lg hover:bg-gray-50 transition-colors duration-300 font-medium flex items-center justify-center"
+              >
+                ⭐ Rate Doctor
+              </button>
             </div>
           </div>
 
-          <div className="flex gap-4">
-            <button 
-              onClick={() => onBookAppointment(doctor)}
-              className="flex-1 bg-blue-600 text-white py-3 px-6 rounded-lg hover:bg-blue-700 transition-colors duration-300"
-            >
-              Book Appointment
-            </button>
-            <button
-              onClick={onClose}
-              className="flex-1 border border-gray-300 text-gray-700 py-3 px-6 rounded-lg hover:bg-gray-50 transition-colors duration-300"
-            >
-              Close
-            </button>
+          {/* Right Panel - About Section */}
+          <div className="flex-1 p-8">
+            {/* About Doctor Section */}
+            <div className="mb-8">
+              <h2 className="text-2xl font-bold text-gray-900 mb-4">About Doctor</h2>
+              <p className="text-gray-600 leading-relaxed mb-6">
+                Certified personal trainer with {doctor.experience} years of experience specializing in {doctor.specialization.toLowerCase()}, 
+                rehabilitation, nutrition and calisthenics. I help clients achieve their fitness goals through 
+                personalized training programs and nutritional guidance. My approach focuses on building 
+                sustainable habits for long-term success.
+              </p>
+            </div>
+
+            {/* Certifications Section */}
+            <div className="mb-8">
+              <h3 className="text-xl font-bold text-gray-900 mb-4">Certifications</h3>
+              <div className="space-y-3">
+                <div className="flex items-center">
+                  <span className="text-green-500 mr-3">✓</span>
+                  <span className="text-gray-700">Certified Personal Trainer (CPT)</span>
+                </div>
+                <div className="flex items-center">
+                  <span className="text-green-500 mr-3">✓</span>
+                  <span className="text-gray-700">Rehabilitation Specialist</span>
+                </div>
+                <div className="flex items-center">
+                  <span className="text-green-500 mr-3">✓</span>
+                  <span className="text-gray-700">Sports Nutrition Certification</span>
+                </div>
+                <div className="flex items-center">
+                  <span className="text-green-500 mr-3">✓</span>
+                  <span className="text-gray-700">First Aid and CPR Certified</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Education Section */}
+            <div className="mb-6">
+              <h3 className="text-xl font-bold text-gray-900 mb-4">Education</h3>
+              <div className="flex items-center">
+                <span className="text-blue-500 mr-3">🎓</span>
+                <span className="text-gray-700">Bachelor's Degree in Sports Science, University of Colombo.</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>

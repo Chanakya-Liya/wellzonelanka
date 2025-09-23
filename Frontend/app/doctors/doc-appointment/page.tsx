@@ -5,6 +5,8 @@ import { ArrowLeft, ChevronLeft, ChevronRight, Clock, Star } from 'lucide-react'
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { createAppointment, AppointmentData } from '../../../lib/services/appointmentService';
+import { getDoctorReviews, Review as DoctorReview } from '../../../lib/services/reviewService';
+import { withAuth } from '@/hooks/useAuth';
 
 interface Doctor {
   id: string;
@@ -41,7 +43,7 @@ interface PatientDetails {
   description: string;
 }
 
-export default function BookingAppointment() {
+function BookingAppointment() {
   const router = useRouter();
   const [doctor, setDoctor] = useState<Doctor | null>(null);
   const [loading, setLoading] = useState(true);
@@ -62,7 +64,8 @@ export default function BookingAppointment() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   
   // Mock reviews data (replace with actual API call)
-  const [reviews, setReviews] = useState<Review[]>([]);
+  const [reviews, setReviews] = useState<DoctorReview[]>([]);
+  const [reviewsLoading, setReviewsLoading] = useState(true);
 
   const timeSlots = [
     "9:00AM", "10:00AM", "11:00AM",
@@ -71,57 +74,64 @@ export default function BookingAppointment() {
     "6:00PM", "7:00PM", "8:00PM"
   ];
 
-  // Generate mock reviews
-  const generateMockReviews = (doctorName: string): Review[] => {
-    const reviewTemplates = [
-      { rating: 5, comment: "Professional staff and excellent facilities. The personalized care plan made all the difference in my rehabilitation." },
-      { rating: 4, comment: "Great experience overall. Dr. was very knowledgeable and helpful throughout my treatment." },
-      { rating: 5, comment: "Outstanding service! The doctor was very thorough and explained everything clearly." },
-      { rating: 3, comment: "Good treatment but had to wait a bit longer than expected. Otherwise satisfied with the care." },
-      { rating: 4, comment: "Very professional and caring approach. Would definitely recommend to others." },
-      { rating: 5, comment: "Excellent care and attention to detail. The treatment plan was very effective." },
-      { rating: 4, comment: "Good consultation and follow-up care. The staff was friendly and accommodating." },
-      { rating: 2, comment: "Treatment was okay but communication could be improved. Expected more detailed explanations." },
-      { rating: 5, comment: "Amazing results! The doctor's expertise really showed in the treatment approach." },
-      { rating: 4, comment: "Very satisfied with the care received. Professional and efficient service." },
-      { rating: 3, comment: "Average experience. Treatment was effective but facility could be improved." },
-      { rating: 5, comment: "Exceptional care and personalized attention. Highly recommend this doctor." },
-      { rating: 4, comment: "Good overall experience. The doctor was patient and answered all my questions." },
-      { rating: 1, comment: "Disappointed with the service. Had to reschedule multiple times and communication was poor." },
-      { rating: 5, comment: "Top-notch medical care. The doctor's experience and skill were evident throughout." },
-      { rating: 4, comment: "Professional and thorough examination. Treatment plan was well explained." },
-      { rating: 3, comment: "Decent service but could improve waiting times. Treatment was satisfactory." },
-      { rating: 5, comment: "Excellent bedside manner and very knowledgeable. Made me feel comfortable throughout." }
-    ];
-
-    const names = ["John Smith", "Sarah Johnson", "Michael Brown", "Emily Davis", "David Wilson", "Jessica Miller", "Robert Garcia", "Lisa Anderson", "William Taylor", "Amanda Thomas"];
-    
-    return reviewTemplates.slice(0, 15).map((template, index) => ({
-      id: `review-${index}`,
-      patientName: names[index % names.length],
-      rating: template.rating,
-      comment: template.comment,
-      date: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString()
-    }));
-  };
-
-  // Calculate average rating
-  const calculateAverageRating = (reviews: Review[]): number => {
-    if (reviews.length === 0) return 0;
-    const sum = reviews.reduce((acc, review) => acc + review.rating, 0);
-    return parseFloat((sum / reviews.length).toFixed(1));
-  };
-
   useEffect(() => {
     const storedDoctor = localStorage.getItem('selectedDoctor');
     if (storedDoctor) {
       try {
         const doctorData = JSON.parse(storedDoctor);
-        const mockReviews = generateMockReviews(doctorData.name);
-        doctorData.reviews = mockReviews;
-        doctorData.rating = calculateAverageRating(mockReviews);
         setDoctor(doctorData);
-        setReviews(mockReviews);
+        
+        // Fetch real reviews for this doctor
+        const fetchReviews = async () => {
+          try {
+            setReviewsLoading(true);
+            console.log('Fetching reviews for doctor ID:', doctorData.id);
+            
+            // Always add test review first for testing
+            const testReview: DoctorReview = {
+              id: 'test-review',
+              doctorId: doctorData.id,
+              patientName: 'thevinu',
+              rating: 4,
+              comment: 'he is a good doctor. he really helpfull',
+              date: '2025-09-18',
+              createdAt: '2025-09-18T05:39:25.665Z'
+            };
+            
+            const doctorReviews = await getDoctorReviews(doctorData.id);
+            console.log('Fetched reviews from Firebase:', doctorReviews);
+            
+            // Combine test review with fetched reviews for now
+            const allReviews = [testReview, ...doctorReviews];
+            setReviews(allReviews);
+            
+            // Update doctor's rating based on reviews
+            if (allReviews.length > 0) {
+              const totalRating = allReviews.reduce((sum, review) => sum + review.rating, 0);
+              const averageRating = parseFloat((totalRating / allReviews.length).toFixed(1));
+              doctorData.rating = averageRating;
+              setDoctor({...doctorData});
+              console.log('Updated doctor rating to:', averageRating);
+            }
+          } catch (error) {
+            console.error('Error fetching reviews:', error);
+            // Show test review even if there's an error
+            const testReview: DoctorReview = {
+              id: 'test-review-error',
+              doctorId: doctorData.id,
+              patientName: 'Test Patient',
+              rating: 5,
+              comment: 'Test review to verify component is working',
+              date: '2025-09-18',
+              createdAt: '2025-09-18T05:39:25.665Z'
+            };
+            setReviews([testReview]);
+          } finally {
+            setReviewsLoading(false);
+          }
+        };
+        
+        fetchReviews();
       } catch (error) {
         console.error('Error parsing doctor data:', error);
         router.push('/doctors/doctors-names');
@@ -214,7 +224,9 @@ export default function BookingAppointment() {
       
       // Prepare appointment data
       const appointmentData: AppointmentData = {
-        date: selectedDate.toISOString().split('T')[0], // YYYY-MM-DD format
+        date: selectedDate.getFullYear() + '-' + 
+              String(selectedDate.getMonth() + 1).padStart(2, '0') + '-' + 
+              String(selectedDate.getDate()).padStart(2, '0'), // Local timezone YYYY-MM-DD format
         serviceType: 'Consultation', // You can make this dynamic
         time: selectedTime,
         doctorId: doctor?.id || '',
@@ -330,7 +342,7 @@ export default function BookingAppointment() {
                     </div>
                     <div className="flex items-center text-sm text-gray-600">
                       <Star className="h-4 w-4 text-yellow-400 mr-1" />
-                      <span>{doctor.rating?.toFixed(1) || '0.0'} Rating</span>
+                      <span>{doctor.rating?.toFixed(1) || '0.0'} Rating ({reviews.length} reviews)</span>
                     </div>
                   </div>
                 </div>
@@ -338,30 +350,56 @@ export default function BookingAppointment() {
 
               {/* Patient Reviews */}
               <div className="bg-white rounded-lg p-6 shadow-sm">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Patient Reviews</h3>
-                <div className="space-y-4 max-h-96 overflow-y-auto">
-                  {reviews.map((review) => (
-                    <div key={review.id} className="border-b border-gray-100 pb-4 last:border-b-0">
-                      <div className="flex items-center mb-2">
-                        <div className="w-8 h-8 bg-gray-300 rounded-full mr-3"></div>
-                        <div>
-                          <h4 className="font-medium text-gray-900">{review.patientName}</h4>
-                          <div className="flex items-center">
-                            {[...Array(5)].map((_, i) => (
-                              <Star
-                                key={i}
-                                className={`h-4 w-4 ${
-                                  i < review.rating ? 'text-yellow-400 fill-current' : 'text-gray-300'
-                                }`}
-                              />
-                            ))}
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                  Patient Reviews {reviews.length > 0 && `(${reviews.length})`}
+                </h3>
+                
+                {reviewsLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-cyan-600"></div>
+                    <span className="ml-2 text-gray-600">Loading reviews...</span>
+                  </div>
+                ) : reviews.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Star className="h-12 w-12 text-gray-300 mx-auto mb-2" />
+                    <p className="text-gray-500">No reviews yet</p>
+                    <p className="text-sm text-gray-400">Be the first to review this doctor!</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4 max-h-96 overflow-y-auto">
+                    {reviews.map((review) => (
+                      <div key={review.id} className="border-b border-gray-100 pb-4 last:border-b-0">
+                        <div className="flex items-center mb-2">
+                          <div className="w-8 h-8 bg-gradient-to-r from-cyan-400 to-blue-500 rounded-full mr-3 flex items-center justify-center">
+                            <span className="text-white text-sm font-medium">
+                              {review.patientName.charAt(0).toUpperCase()}
+                            </span>
+                          </div>
+                          <div className="flex-1">
+                            <div className="flex items-center justify-between">
+                              <h4 className="font-medium text-gray-900">{review.patientName}</h4>
+                              <span className="text-xs text-gray-500">
+                                {new Date(review.date).toLocaleDateString()}
+                              </span>
+                            </div>
+                            <div className="flex items-center">
+                              {[...Array(5)].map((_, i) => (
+                                <Star
+                                  key={i}
+                                  className={`h-4 w-4 ${
+                                    i < review.rating ? 'text-yellow-400 fill-current' : 'text-gray-300'
+                                  }`}
+                                />
+                              ))}
+                              <span className="ml-2 text-sm text-gray-600">({review.rating}/5)</span>
+                            </div>
                           </div>
                         </div>
+                        <p className="text-sm text-gray-600 italic pl-11">"{review.comment}"</p>
                       </div>
-                      <p className="text-sm text-gray-600 italic">"{review.comment}"</p>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -625,3 +663,9 @@ export default function BookingAppointment() {
     </>
   );
 }
+
+// Export the protected component
+export default withAuth(BookingAppointment, {
+  redirectTo: '/auth/login',
+  showLoadingMessage: 'Please log in to book doctor appointments.'
+});

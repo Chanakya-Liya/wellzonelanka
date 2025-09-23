@@ -15,9 +15,39 @@ import {
   Dumbbell
 } from "lucide-react";
 
+interface DashboardStats {
+  totalAppointments: number;
+  todaysSessions: number;
+  newBookings: number;
+  confirmedAppointments: number;
+  uniqueClients: number;
+}
+
+interface TodaysSession {
+  id: string;
+  clientName: string;
+  sessionType: string;
+  time: string;
+  duration: string;
+  status: string;
+  userfirstname: string;
+  userlastname: string;
+  userEmail: string;
+}
+
 export default function TrainerDashboard() {
   const [trainerName, setTrainerName] = useState("Test Trainer");
   const [trainerEmail, setTrainerEmail] = useState("trainer@gmail.com");
+  const [trainerId, setTrainerId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState<DashboardStats>({
+    totalAppointments: 0,
+    todaysSessions: 0,
+    newBookings: 0,
+    confirmedAppointments: 0,
+    uniqueClients: 0
+  });
+  const [todaysSessions, setTodaysSessions] = useState<TodaysSession[]>([]);
 
   useEffect(() => {
     // Get trainer data from localStorage if available
@@ -30,56 +60,64 @@ export default function TrainerDashboard() {
       if (userData.email) {
         setTrainerEmail(userData.email);
       }
+      if (userData.id) {
+        setTrainerId(userData.id);
+      }
     }
   }, []);
+
+  useEffect(() => {
+    if (trainerId) {
+      fetchDashboardData();
+    }
+  }, [trainerId]);
+
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch(`/api/trainer-dashboard/${trainerId}`);
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setStats(data.stats);
+          
+          // Format today's sessions
+          const formattedSessions = data.todaysSessions.map((session: any) => ({
+            id: session.id,
+            clientName: `${session.userfirstname} ${session.userlastname}`,
+            sessionType: session.sessionType,
+            time: session.time,
+            duration: session.duration || '60 min',
+            status: session.status.toLowerCase(),
+            userfirstname: session.userfirstname,
+            userlastname: session.userlastname,
+            userEmail: session.userEmail
+          }));
+          
+          setTodaysSessions(formattedSessions);
+        }
+      } else {
+        console.error('Failed to fetch dashboard data');
+      }
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleLogout = () => {
     localStorage.removeItem('currentUser');
     window.location.href = '/auth/login';
   };
 
-  // Mock data for dashboard stats
-  const stats = [
-    { title: "Profile Views", value: "156", icon: User, color: "bg-blue-500" },
-    { title: "Total Clients", value: "85", icon: Users, color: "bg-green-500" },
-    { title: "New Bookings", value: "12", icon: Calendar, color: "bg-yellow-500" },
-    { title: "Today Sessions", value: "4", icon: Dumbbell, color: "bg-purple-500" },
-  ];
-
-  // Mock upcoming sessions data
-  const upcomingSessions = [
-    {
-      id: 1,
-      clientName: "John Smith",
-      sessionType: "Personal Training",
-      time: "9:00 AM",
-      duration: "60 min",
-      status: "confirmed"
-    },
-    {
-      id: 2,
-      clientName: "Maria Garcia",
-      sessionType: "Strength Training",
-      time: "11:00 AM", 
-      duration: "45 min",
-      status: "confirmed"
-    },
-    {
-      id: 3,
-      clientName: "David Wilson",
-      sessionType: "Cardio Training",
-      time: "2:00 PM",
-      duration: "30 min",
-      status: "pending"
-    },
-    {
-      id: 4,
-      clientName: "Sarah Johnson",
-      sessionType: "Weight Loss Program",
-      time: "4:00 PM",
-      duration: "60 min",
-      status: "confirmed"
-    }
+  // Dashboard stats configuration
+  const statsConfig = [
+    { title: "Total Clients", value: stats.uniqueClients.toString(), icon: Users, color: "bg-blue-500" },
+    { title: "Total Appointments", value: stats.totalAppointments.toString(), icon: Calendar, color: "bg-green-500" },
+    { title: "New Bookings", value: stats.newBookings.toString(), icon: TrendingUp, color: "bg-yellow-500" },
+    { title: "Today Sessions", value: stats.todaysSessions.toString(), icon: Dumbbell, color: "bg-purple-500" },
   ];
 
   return (
@@ -151,7 +189,7 @@ export default function TrainerDashboard() {
 
             {/* Stats Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-              {stats.map((stat, index) => (
+              {statsConfig.map((stat, index) => (
                 <div key={index} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                   <div className="flex items-center justify-between">
                     <div>
@@ -173,13 +211,20 @@ export default function TrainerDashboard() {
                   <h2 className="text-xl font-semibold text-gray-900">Today's Training Sessions</h2>
                   <div className="flex items-center space-x-2">
                     <Clock className="w-5 h-5 text-gray-400" />
-                    <span className="text-sm text-gray-500">Updated just now</span>
+                    <span className="text-sm text-gray-500">
+                      {loading ? 'Loading...' : 'Updated just now'}
+                    </span>
                   </div>
                 </div>
               </div>
               
               <div className="p-6">
-                {upcomingSessions.length === 0 ? (
+                {loading ? (
+                  <div className="text-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-cyan-600 mx-auto"></div>
+                    <p className="text-gray-500 mt-4">Loading sessions...</p>
+                  </div>
+                ) : todaysSessions.length === 0 ? (
                   <div className="text-center py-8">
                     <Dumbbell className="w-12 h-12 text-gray-300 mx-auto mb-4" />
                     <p className="text-gray-500">No sessions scheduled for today</p>
@@ -210,7 +255,7 @@ export default function TrainerDashboard() {
                         </tr>
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-200">
-                        {upcomingSessions.map((session) => (
+                        {todaysSessions.map((session) => (
                           <tr key={session.id} className="hover:bg-gray-50">
                             <td className="px-6 py-4 whitespace-nowrap">
                               <div className="flex items-center">

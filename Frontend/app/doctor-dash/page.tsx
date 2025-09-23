@@ -1,8 +1,11 @@
+"use client";
+
 import type React from "react";
 import Link from "next/link";
 import { Video, Calendar, ClipboardList } from "lucide-react";
+import { withAuth } from "@/hooks/useAuth";
 
-export default function DoctorServicesPage() {
+function DoctorServicesPage() {
   return (
     <div className="bg-white min-h-screen flex items-center justify-center py-10">
       <div className="flex flex-col min-h-screen bg-white text-black">
@@ -49,6 +52,13 @@ export default function DoctorServicesPage() {
     </div>
   );
 }
+
+// Wrap with authentication
+const AuthenticatedDoctorServicesPage = withAuth(DoctorServicesPage, {
+  showLoadingMessage: "Please log in to access doctor services and consultations."
+});
+
+export default AuthenticatedDoctorServicesPage;
 
 interface ServiceCardProps {
   title: string;

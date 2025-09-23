@@ -13,14 +13,35 @@ import {
   Edit,
   Save,
   X,
-  Dumbbell
+  Dumbbell,
+  Clock,
+  CheckCircle,
+  XCircle,
+  AlertCircle
 } from "lucide-react";
+
+interface PendingChange {
+  id: string;
+  changeType: string;
+  trainerId: string;
+  originalData: any;
+  proposedChanges: any;
+  status: string;
+  submittedAt: string;
+  reviewedAt?: string;
+  reviewedBy?: string;
+  adminNotes?: string;
+}
 
 export default function TrainerSettings() {
   const [trainerName, setTrainerName] = useState("Test Trainer");
   const [trainerEmail, setTrainerEmail] = useState("trainer@gmail.com");
+  const [trainerId, setTrainerId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('profile');
   const [isEditing, setIsEditing] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [originalData, setOriginalData] = useState<any>({});
+  const [pendingChanges, setPendingChanges] = useState<PendingChange[]>([]);
   const [formData, setFormData] = useState({
     fullName: "Coach Sarah Martinez",
     email: "sarah.martinez@wellzone.com",
@@ -41,31 +62,121 @@ export default function TrainerSettings() {
       const userData = JSON.parse(currentUser);
       if (userData.firstName && userData.lastName) {
         setTrainerName(`${userData.firstName} ${userData.lastName}`);
-        setFormData(prev => ({
-          ...prev,
-          fullName: `Coach ${userData.firstName} ${userData.lastName}`
-        }));
+        const newFormData = {
+          fullName: `${userData.firstName} ${userData.lastName}`,
+          email: userData.email || '',
+          phone: userData.phone || '',
+          licenseNumber: userData.licenseNumber || '',
+          specialization: userData.specialization || '',
+          experience: userData.experience?.toString() || '',
+          bio: userData.bio || '',
+          address: userData.address || '',
+          education: userData.education || '',
+          certifications: userData.certifications || ''
+        };
+        setFormData(newFormData);
+        setOriginalData(newFormData); // Store original data for comparison
       }
       if (userData.email) {
         setTrainerEmail(userData.email);
-        setFormData(prev => ({
-          ...prev,
-          email: userData.email
-        }));
+      }
+      if (userData.id) {
+        setTrainerId(userData.id);
       }
     }
   }, []);
+
+  useEffect(() => {
+    if (trainerId) {
+      fetchPendingChanges();
+    }
+  }, [trainerId]);
+
+  const fetchPendingChanges = async () => {
+    if (!trainerId) return;
+    
+    try {
+      const response = await fetch(`/api/trainer-profile-changes/${trainerId}`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setPendingChanges(data.data);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching pending changes:', error);
+    }
+  };
 
   const handleLogout = () => {
     localStorage.removeItem('currentUser');
     window.location.href = '/auth/login';
   };
 
-  const handleSave = () => {
-    // Save form data logic here
-    console.log('Saving form data:', formData);
-    setIsEditing(false);
-    // You can add API call here to save to database
+  const handleSave = async () => {
+    if (!trainerId) {
+      alert('Trainer ID not found. Please log in again.');
+      return;
+    }
+
+    // Compare current form data with original data to find changes
+    const changes: any = {};
+    let hasChanges = false;
+
+    Object.keys(formData).forEach(key => {
+      if (formData[key as keyof typeof formData] !== originalData[key as keyof typeof originalData]) {
+        changes[key] = formData[key as keyof typeof formData];
+        hasChanges = true;
+      }
+    });
+
+    if (!hasChanges) {
+      alert('No changes detected.');
+      setIsEditing(false);
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await fetch('/api/trainer-profile-changes', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          trainerId,
+          changes
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        alert('Profile changes submitted for approval!');
+        setIsEditing(false);
+        fetchPendingChanges(); // Refresh pending changes
+        
+        // Reset form to original data since changes are pending
+        setFormData(originalData);
+      } else {
+        alert(`Error: ${data.error}`);
+      }
+    } catch (error) {
+      console.error('Error submitting changes:', error);
+      alert('Failed to submit changes. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getChangedFields = () => {
+    const changedFields: string[] = [];
+    Object.keys(formData).forEach(key => {
+      if (formData[key as keyof typeof formData] !== originalData[key as keyof typeof originalData]) {
+        changedFields.push(key);
+      }
+    });
+    return changedFields;
   };
 
   return (
@@ -374,17 +485,31 @@ export default function TrainerSettings() {
                   {isEditing && (
                     <div className="mt-8 flex justify-end space-x-4">
                       <button
-                        onClick={() => setIsEditing(false)}
+                        onClick={() => {
+                          setFormData(originalData); // Reset to original data
+                          setIsEditing(false);
+                        }}
                         className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                        disabled={loading}
                       >
                         Cancel
                       </button>
                       <button
                         onClick={handleSave}
-                        className="flex items-center space-x-2 px-6 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 transition-colors"
+                        disabled={loading || getChangedFields().length === 0}
+                        className="flex items-center space-x-2 px-6 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
                       >
-                        <Save className="w-4 h-4" />
-                        <span>Save Changes</span>
+                        {loading ? (
+                          <>
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                            <span>Submitting...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Save className="w-4 h-4" />
+                            <span>Submit for Approval ({getChangedFields().length} changes)</span>
+                          </>
+                        )}
                       </button>
                     </div>
                   )}
@@ -396,14 +521,123 @@ export default function TrainerSettings() {
             {activeTab === 'changes' && (
               <div className="bg-white rounded-lg shadow-sm border border-gray-200">
                 <div className="p-6 border-b border-gray-200">
-                  <h2 className="text-xl font-semibold text-gray-900">Pending Changes</h2>
-                  <p className="text-gray-600 mt-1">Review changes waiting for approval</p>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h2 className="text-xl font-semibold text-gray-900">Pending Changes</h2>
+                      <p className="text-gray-600 mt-1">Review changes waiting for approval</p>
+                    </div>
+                    <button
+                      onClick={fetchPendingChanges}
+                      className="flex items-center space-x-2 px-4 py-2 text-cyan-600 border border-cyan-600 rounded-lg hover:bg-cyan-50 transition-colors"
+                    >
+                      <Clock className="w-4 h-4" />
+                      <span>Refresh</span>
+                    </button>
+                  </div>
                 </div>
                 <div className="p-6">
-                  <div className="text-center py-12">
-                    <SettingsIcon className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                    <p className="text-gray-500">No pending changes at this time</p>
-                  </div>
+                  {pendingChanges.length === 0 ? (
+                    <div className="text-center py-12">
+                      <CheckCircle className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                      <p className="text-gray-500">No pending changes at this time</p>
+                      <p className="text-sm text-gray-400 mt-2">All your profile updates are current</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-6">
+                      {pendingChanges.map((change) => (
+                        <div key={change.id} className="border border-gray-200 rounded-lg p-6">
+                          <div className="flex items-center justify-between mb-4">
+                            <div className="flex items-center space-x-3">
+                              <div className={`flex items-center space-x-2 px-3 py-1 rounded-full text-sm font-medium ${
+                                change.status === 'pending' 
+                                  ? 'bg-yellow-100 text-yellow-800' 
+                                  : change.status === 'approved'
+                                  ? 'bg-green-100 text-green-800'
+                                  : 'bg-red-100 text-red-800'
+                              }`}>
+                                {change.status === 'pending' && <AlertCircle className="w-4 h-4" />}
+                                {change.status === 'approved' && <CheckCircle className="w-4 h-4" />}
+                                {change.status === 'rejected' && <XCircle className="w-4 h-4" />}
+                                <span className="capitalize">{change.status}</span>
+                              </div>
+                              <span className="text-sm text-gray-500">
+                                Profile Update Request
+                              </span>
+                            </div>
+                            <div className="text-sm text-gray-500">
+                              Submitted: {new Date(change.submittedAt).toLocaleDateString()}
+                            </div>
+                          </div>
+
+                          {/* Changed Fields */}
+                          <div className="mb-4">
+                            <h4 className="font-medium text-gray-900 mb-3">Changes Requested:</h4>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              {Object.entries(change.proposedChanges).map(([field, newValue]) => {
+                                const originalValue = change.originalData[field];
+                                const fieldLabels: { [key: string]: string } = {
+                                  fullName: 'Full Name',
+                                  email: 'Email',
+                                  phone: 'Phone',
+                                  licenseNumber: 'License Number',
+                                  specialization: 'Specialization',
+                                  experience: 'Experience',
+                                  bio: 'Bio',
+                                  address: 'Address',
+                                  education: 'Education',
+                                  certifications: 'Certifications'
+                                };
+                                
+                                return (
+                                  <div key={field} className="bg-gray-50 p-3 rounded-lg">
+                                    <div className="font-medium text-sm text-gray-700 mb-2">
+                                      {fieldLabels[field] || field}
+                                    </div>
+                                    <div className="space-y-2">
+                                      <div>
+                                        <span className="text-xs text-gray-500">Current:</span>
+                                        <p className="text-sm text-gray-600 bg-white p-2 rounded border">
+                                          {originalValue || 'Not set'}
+                                        </p>
+                                      </div>
+                                      <div>
+                                        <span className="text-xs text-green-600">Proposed:</span>
+                                        <p className="text-sm text-green-700 bg-green-50 p-2 rounded border border-green-200">
+                                          {newValue as string}
+                                        </p>
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+
+                          {/* Admin Notes */}
+                          {change.adminNotes && (
+                            <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                              <h5 className="font-medium text-blue-900 mb-2">Admin Notes:</h5>
+                              <p className="text-sm text-blue-800">{change.adminNotes}</p>
+                            </div>
+                          )}
+
+                          {/* Review Info */}
+                          {change.reviewedAt && (
+                            <div className="mt-4 pt-4 border-t border-gray-200">
+                              <div className="flex items-center justify-between text-sm text-gray-500">
+                                <span>
+                                  Reviewed by: {change.reviewedBy || 'Admin'}
+                                </span>
+                                <span>
+                                  {new Date(change.reviewedAt).toLocaleDateString()}
+                                </span>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             )}
