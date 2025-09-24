@@ -5,6 +5,8 @@ import { ArrowLeft, ChevronLeft, ChevronRight, Clock, Star } from 'lucide-react'
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { withAuth } from '@/hooks/useAuth';
+import Navbar from "@/components/Navbar";
+import { Footer } from '@/app/Footer';
 // We'll need to create trainer appointment service similar to doctor appointments
 // import { createTrainerAppointment, TrainerAppointmentData } from '../../../lib/services/trainerAppointmentService';
 
@@ -300,19 +302,20 @@ function TrainerBookingAppointment() {
       `}</style>
       <div className="min-h-screen bg-gray-50">
         {/* Header */}
-        <div className="bg-cyan-400 py-4">
-          <div className="max-w-full mx-auto flex items-center px-4">
+        <Navbar />
+        <div className="bg-cyan-400 py-4" >
+          <div className="max-w-full mx-auto flex items-center px-4" style={{ marginTop: '10vh' }}>
             <button 
               onClick={handleGoBack}
               className="text-white hover:text-gray-200 mr-4"
             >
               <ArrowLeft className="h-6 w-6" />
             </button>
-            <h1 className="text-xl font-semibold text-white">Book Training Session</h1>
+            <h1 className="text-xl font-semibold text-black">Book Training Session</h1>
           </div>
         </div>
 
-        <div className="max-w-full mx-auto py-6">
+        <div className="max-w-full mx-auto py-6" >
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 px-4">
             
             {/* Left Column - Trainer Info and Client Reviews */}
@@ -560,66 +563,66 @@ function TrainerBookingAppointment() {
                           </button>
                         </div>
                         
-                        <div className="space-y-4">
+                        <div className="space-y-4 text-gray-800">
                           <div className="grid grid-cols-2 gap-4">
                             <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1">First Name:</label>
+                              <label className="block text-sm font-medium mb-1">First Name:</label>
                               <input
                                 type="text"
                                 value={clientDetails.firstName}
                                 onChange={(e) => handleClientDetailsChange('firstName', e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                                className="w-full px-3 py-2 border text-gray-800 border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-cyan-500"
                               />
                             </div>
                             <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1">Last Name:</label>
+                              <label className="block text-sm font-medium mb-1">Last Name:</label>
                               <input
                                 type="text"
                                 value={clientDetails.lastName}
                                 onChange={(e) => handleClientDetailsChange('lastName', e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                                className="w-full px-3 py-2 border text-gray-800 border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-cyan-500"
                               />
                             </div>
                           </div>
                           
                           <div className="grid grid-cols-2 gap-4">
                             <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number:</label>
+                              <label className="block text-sm font-medium mb-1">Phone Number:</label>
                               <input
                                 type="tel"
                                 value={clientDetails.phoneNumber}
                                 onChange={(e) => handleClientDetailsChange('phoneNumber', e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                                className="w-full px-3 py-2 border text-gray-800 border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-cyan-500"
                               />
                             </div>
                             <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1">Address:</label>
+                              <label className="block text-sm font-medium mb-1">Address:</label>
                               <input
                                 type="text"
                                 value={clientDetails.address}
                                 onChange={(e) => handleClientDetailsChange('address', e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                                className="w-full px-3 py-2 border text-gray-800 border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-cyan-500"
                               />
                             </div>
                           </div>
                           
                           <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Fitness Goals:</label>
+                            <label className="block text-sm font-medium mb-1">Fitness Goals:</label>
                             <textarea
                               rows={3}
                               value={clientDetails.fitnessGoals}
                               onChange={(e) => handleClientDetailsChange('fitnessGoals', e.target.value)}
                               placeholder="e.g., Weight loss, muscle building, strength training..."
-                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                              className="w-full px-3 py-2 border text-gray-800 border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-cyan-500"
                             />
                           </div>
                           
                           <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Fitness Experience:</label>
+                            <label className="block text-sm font-medium mb-1">Fitness Experience:</label>
                             <select
                               value={clientDetails.experience}
                               onChange={(e) => handleClientDetailsChange('experience', e.target.value)}
-                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                              className="w-full px-3 py-2 border text-gray-800 border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-cyan-500"
                             >
                               <option value="">Select your experience level</option>
                               <option value="beginner">Beginner (0-6 months)</option>
@@ -636,17 +639,17 @@ function TrainerBookingAppointment() {
                         
                         <div className="bg-gray-50 rounded-lg p-4 space-y-3">
                           <div className="flex justify-between">
-                            <span className="text-sm text-gray-600">Training Session Fee</span>
-                            <span className="text-sm font-medium">{trainer.hourlyRate || 'Rs. 2,500/hour'}</span>
+                            <span className="text-sm text-gray-800">Training Session Fee</span>
+                            <span className="text-sm text-gray-800 font-medium">{trainer.hourlyRate || 'Rs. 2,500/hour'}</span>
                           </div>
                           
                           <div className="border-t border-gray-200 pt-3">
-                            <div className="text-sm text-gray-600 mb-2">
+                            <div className="text-sm text-gray-800 mb-2">
                               <div className="font-medium">{trainer.firstName} {trainer.lastName}</div>
                               <div className="text-xs">Personal Trainer</div>
                             </div>
-                            
-                            <div className="space-y-1 text-xs text-gray-600">
+
+                            <div className="space-y-1 text-xs text-gray-800">
                               <div className="flex justify-between">
                                 <span>Client Name</span>
                                 <span>{clientDetails.firstName} {clientDetails.lastName}</span>
@@ -693,6 +696,7 @@ function TrainerBookingAppointment() {
             </div>
           </div>
         </div>
+        <Footer />
       </div>
     </>
   );

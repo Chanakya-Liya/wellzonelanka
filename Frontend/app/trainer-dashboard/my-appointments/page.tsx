@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
+import { Footer } from '@/app/Footer';
 import { 
   User, 
   Calendar, 
@@ -273,13 +274,13 @@ export default function TrainerAppointments() {
                   placeholder="Search clients or session types..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
+                  className="w-full pl-10 pr-4 py-2 text-gray-800 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
                 />
               </div>
-              <button className="flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+              {/* <button className="flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
                 <Filter className="w-4 h-4" />
                 <span>Filter</span>
-              </button>
+              </button> */}
             </div>
 
             {/* Tabs */}
@@ -406,6 +407,7 @@ export default function TrainerAppointments() {
           </div>
         </div>
       </div>
+    <Footer />
     </div>
   );
 }

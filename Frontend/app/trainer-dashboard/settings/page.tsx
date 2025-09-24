@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
+import { Footer } from '@/app/Footer';
 import { 
   User, 
   Calendar, 
@@ -304,7 +305,7 @@ export default function TrainerSettings() {
                   </div>
                 </div>
 
-                <div className="p-6">
+                <div className="p-6 text-gray-800">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* Full Name */}
                     <div>
@@ -644,6 +645,7 @@ export default function TrainerSettings() {
           </div>
         </div>
       </div>
+    <Footer />
     </div>
   );
 }

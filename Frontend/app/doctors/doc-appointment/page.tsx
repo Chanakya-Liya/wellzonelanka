@@ -7,6 +7,8 @@ import { useRouter } from 'next/navigation';
 import { createAppointment, AppointmentData } from '../../../lib/services/appointmentService';
 import { getDoctorReviews, Review as DoctorReview } from '../../../lib/services/reviewService';
 import { withAuth } from '@/hooks/useAuth';
+import Navbar from "@/components/Navbar";
+import { Footer } from '@/app/Footer';
 
 interface Doctor {
   id: string;
@@ -302,15 +304,16 @@ function BookingAppointment() {
       `}</style>
       <div className="min-h-screen bg-gray-50">
         {/* Header */}
-        <div className="bg-cyan-400 py-4">
-          <div className="max-w-full mx-auto flex items-center px-4">
+        <Navbar />
+        <div className="bg-cyan-400 py-4" >
+          <div className="max-w-full mx-auto flex items-center px-4" style={{ marginTop: '10vh' }}>
             <button 
               onClick={handleGoBack}
               className="text-white hover:text-gray-200 mr-4"
             >
               <ArrowLeft className="h-6 w-6" />
             </button>
-            <h1 className="text-xl font-semibold text-white">Booking Appointment</h1>
+            <h1 className="text-xl font-semibold text-black">Booking Appointment</h1>
           </div>
         </div>
 
@@ -557,10 +560,10 @@ function BookingAppointment() {
                           </button>
                         </div>
                         
-                        <div className="space-y-4">
+                        <div className="space-y-4 text-gray-800">
                           <div className="grid grid-cols-2 gap-4">
                             <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1">First Name:</label>
+                              <label className="block text-sm font-medium mb-1">First Name:</label>
                               <input
                                 type="text"
                                 value={patientDetails.firstName}
@@ -569,7 +572,7 @@ function BookingAppointment() {
                               />
                             </div>
                             <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1">Last Name:</label>
+                              <label className="block text-sm font-medium mb-1">Last Name:</label>
                               <input
                                 type="text"
                                 value={patientDetails.lastName}
@@ -581,7 +584,7 @@ function BookingAppointment() {
                           
                           <div className="grid grid-cols-2 gap-4">
                             <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number:</label>
+                              <label className="block text-sm font-medium mb-1">Phone Number:</label>
                               <input
                                 type="tel"
                                 value={patientDetails.phoneNumber}
@@ -590,7 +593,7 @@ function BookingAppointment() {
                               />
                             </div>
                             <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1">Address:</label>
+                              <label className="block text-sm font-medium mb-1">Address:</label>
                               <input
                                 type="text"
                                 value={patientDetails.address}
@@ -601,7 +604,7 @@ function BookingAppointment() {
                           </div>
                           
                           <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Description About Pain/Illness:</label>
+                            <label className="block text-sm font-medium mb-1">Description About Pain/Illness:</label>
                             <textarea
                               rows={4}
                               value={patientDetails.description}
@@ -616,19 +619,19 @@ function BookingAppointment() {
                       <div>
                         <h3 className="text-lg font-semibold text-gray-900 mb-4">Payment Information.</h3>
                         
-                        <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+                        <div className="bg-gray-50 text-gray-800 rounded-lg p-4 space-y-3">
                           <div className="flex justify-between">
-                            <span className="text-sm text-gray-600">Consultation Fee</span>
+                            <span className="text-sm">Consultation Fee</span>
                             <span className="text-sm font-medium">Rs.2,500.00</span>
                           </div>
                           
                           <div className="border-t border-gray-200 pt-3">
-                            <div className="text-sm text-gray-600 mb-2">
+                            <div className="text-sm mb-2">
                               <div className="font-medium">Dr.{doctor.firstName} {doctor.lastName}</div>
                               <div className="text-xs">Consultant</div>
                             </div>
-                            
-                            <div className="space-y-1 text-xs text-gray-600">
+
+                            <div className="space-y-1 text-xs">
                               <div className="flex justify-between">
                                 <span>Patient Name</span>
                                 <span>{patientDetails.firstName} {patientDetails.lastName}</span>
@@ -659,6 +662,7 @@ function BookingAppointment() {
             </div>
           </div>
         </div>
+        <Footer />
       </div>
     </>
   );
