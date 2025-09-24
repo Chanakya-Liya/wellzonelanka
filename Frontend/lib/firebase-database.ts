@@ -20,12 +20,13 @@ interface User {
   lastName: string;
   email: string;
   passwordHash: string;
-  role: 'user' | 'trainer' | 'doctor';
+  role: 'user' | 'trainer' | 'doctor' | 'admin';
   licenseNumber?: string;
   experience?: number;
   specialization?: string;
   createdAt: string;
   isApproved: boolean;
+  status?: 'active' | 'suspended' | 'pending'; // Track user status
 }
 
 interface Appointment {
@@ -73,7 +74,7 @@ class FirebaseDataService {
     lastName: string;
     email: string;
     password: string;
-    role: 'user' | 'trainer' | 'doctor';
+    role: 'user' | 'trainer' | 'doctor' | 'admin';
     licenseNumber?: string;
     experience?: number;
     specialization?: string;
@@ -99,7 +100,8 @@ class FirebaseDataService {
         ...(userData.experience && { experience: userData.experience }),
         ...(userData.specialization && { specialization: userData.specialization }),
         createdAt: new Date().toISOString(),
-        isApproved: userData.role === 'user' // Auto-approve regular users
+        isApproved: userData.role === 'user' || userData.role === 'admin', // Auto-approve regular users and admins
+        status: (userData.role === 'user' || userData.role === 'admin' ? 'active' : 'pending') as 'active' | 'suspended' | 'pending' // Set initial status
       };
 
       // Add document to Firestore with retry logic
@@ -291,7 +293,7 @@ class FirebaseDataService {
     }
   }
 
-  async getUsersByRole(role: 'user' | 'trainer' | 'doctor'): Promise<User[]> {
+  async getUsersByRole(role: 'user' | 'trainer' | 'doctor' | 'admin'): Promise<User[]> {
     try {
       const q = query(
         collection(db, this.usersCollection), 
@@ -317,10 +319,26 @@ class FirebaseDataService {
 
   async approveUser(userId: string): Promise<void> {
     try {
-      await this.updateUser(userId, { isApproved: true });
+      await this.updateUser(userId, { 
+        isApproved: true, 
+        status: 'active' as 'active' | 'suspended' | 'pending' 
+      });
       console.log('User approved:', userId);
     } catch (error) {
       console.error('Error approving user:', error);
+      throw error;
+    }
+  }
+
+  async suspendUser(userId: string): Promise<void> {
+    try {
+      await this.updateUser(userId, { 
+        isApproved: false, 
+        status: 'suspended' as 'active' | 'suspended' | 'pending' 
+      });
+      console.log('User suspended:', userId);
+    } catch (error) {
+      console.error('Error suspending user:', error);
       throw error;
     }
   }

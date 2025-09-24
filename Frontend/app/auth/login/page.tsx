@@ -75,7 +75,9 @@ export default function Login() {
       // Redirect based on role
       setTimeout(() => {
         const userRole = data.user.role;
-        if (userRole === 'doctor') {
+        if (userRole === 'admin') {
+          router.push('/admin');
+        } else if (userRole === 'doctor') {
           router.push('/doctor-dashboard');
         } else if (userRole === 'trainer') {
           router.push('/trainer-dashboard');

@@ -30,6 +30,7 @@ export default function DoctorSettings() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [pendingChanges, setPendingChanges] = useState<any[]>([]);
+  const [profileUpdateMessage, setProfileUpdateMessage] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     fullName: "",
     firstName: "",
@@ -126,6 +127,69 @@ export default function DoctorSettings() {
     initializeDoctorData();
   }, []);
 
+  // Separate useEffect for profile update checking
+  useEffect(() => {
+    if (!doctorId) return;
+
+    // Set up polling to check for approved profile changes
+    const checkForProfileUpdates = async () => {
+      try {
+        console.log('🔄 Checking for profile updates...');
+        
+        // Fetch latest doctor profile
+        const latestProfile = await getDoctorProfile(doctorId);
+        
+        if (latestProfile && latestProfile.lastProfileUpdate) {
+          const lastUpdate = new Date(latestProfile.lastProfileUpdate);
+          const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+          
+          // If profile was updated in the last 5 minutes, refresh the data
+          if (lastUpdate > fiveMinutesAgo) {
+            console.log('✅ Profile was recently updated, refreshing data...');
+            
+            // Update form data with latest profile
+            setFormData({
+              fullName: latestProfile.fullName || `Dr. ${latestProfile.firstName} ${latestProfile.lastName}`,
+              firstName: latestProfile.firstName || "",
+              lastName: latestProfile.lastName || "",
+              email: latestProfile.email || "",
+              phone: latestProfile.phone || "",
+              licenseNumber: latestProfile.licenseNumber || "",
+              specialization: latestProfile.specialization || "",
+              experience: latestProfile.experience || "",
+              bio: latestProfile.bio || "",
+              address: latestProfile.address || "",
+              education: latestProfile.education || "",
+              certifications: latestProfile.certifications || ""
+            });
+            
+            // Update displayed name and email
+            setDoctorName(latestProfile.fullName || `${latestProfile.firstName} ${latestProfile.lastName}`);
+            setDoctorEmail(latestProfile.email || "");
+            
+            // Refresh pending changes
+            const pendingChangesData = await getDoctorPendingChanges(doctorId);
+            setPendingChanges(pendingChangesData);
+            
+            // Show success message
+            setProfileUpdateMessage('✅ Your profile has been updated! The admin approved your changes.');
+            setTimeout(() => setProfileUpdateMessage(null), 10000); // Hide after 10 seconds
+          }
+        }
+      } catch (error) {
+        console.error('Error checking for profile updates:', error);
+      }
+    };
+
+    // Check for updates every 30 seconds
+    const updateInterval = setInterval(checkForProfileUpdates, 30000);
+
+    // Cleanup interval on component unmount
+    return () => {
+      clearInterval(updateInterval);
+    };
+  }, [doctorId]);
+
   const handleLogout = () => {
     localStorage.removeItem('currentUser');
     window.location.href = '/auth/login';
@@ -159,6 +223,62 @@ export default function DoctorSettings() {
       alert('Error submitting changes. Please try again.');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleRefreshProfile = async () => {
+    if (!doctorId) return;
+    
+    try {
+      setLoading(true);
+      console.log('🔄 Manually refreshing profile data...');
+      
+      // Fetch latest doctor profile
+      const latestProfile = await getDoctorProfile(doctorId);
+      
+      if (latestProfile) {
+        console.log('👨‍⚕️ Latest profile loaded:', latestProfile);
+        
+        // Update form data with latest profile
+        setFormData({
+          fullName: latestProfile.fullName || `Dr. ${latestProfile.firstName} ${latestProfile.lastName}`,
+          firstName: latestProfile.firstName || "",
+          lastName: latestProfile.lastName || "",
+          email: latestProfile.email || "",
+          phone: latestProfile.phone || "",
+          licenseNumber: latestProfile.licenseNumber || "",
+          specialization: latestProfile.specialization || "",
+          experience: latestProfile.experience || "",
+          bio: latestProfile.bio || "",
+          address: latestProfile.address || "",
+          education: latestProfile.education || "",
+          certifications: latestProfile.certifications || ""
+        });
+        
+        // Update displayed name and email
+        setDoctorName(latestProfile.fullName || `${latestProfile.firstName} ${latestProfile.lastName}`);
+        setDoctorEmail(latestProfile.email || "");
+        
+        // Check if profile was recently updated
+        if (latestProfile.lastProfileUpdate) {
+          const lastUpdate = new Date(latestProfile.lastProfileUpdate);
+          const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+          
+          if (lastUpdate > oneHourAgo) {
+            setProfileUpdateMessage('✅ Profile data refreshed! Your profile is up to date.');
+            setTimeout(() => setProfileUpdateMessage(null), 5000);
+          }
+        }
+      }
+      
+      // Refresh pending changes
+      const pendingChangesData = await getDoctorPendingChanges(doctorId);
+      setPendingChanges(pendingChangesData);
+      
+    } catch (error) {
+      console.error('Error refreshing profile:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -229,6 +349,35 @@ export default function DoctorSettings() {
               <p className="text-gray-600 mt-2">Manage your profile and account settings</p>
             </div>
 
+            {/* Profile Update Success Message */}
+            {profileUpdateMessage && (
+              <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+                <div className="flex items-start">
+                  <div className="flex-shrink-0">
+                    <svg className="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  <div className="ml-3">
+                    <p className="text-sm font-medium text-green-800">
+                      {profileUpdateMessage}
+                    </p>
+                  </div>
+                  <div className="ml-auto pl-3">
+                    <div className="-mx-1.5 -my-1.5">
+                      <button
+                        onClick={() => setProfileUpdateMessage(null)}
+                        className="inline-flex bg-green-50 rounded-md p-1.5 text-green-500 hover:bg-green-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-green-50 focus:ring-green-600"
+                      >
+                        <span className="sr-only">Dismiss</span>
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Loading State */}
             {loading ? (
               <div className="text-center py-12">
@@ -281,28 +430,47 @@ export default function DoctorSettings() {
                   <div className="flex items-center justify-between">
                     <div>
                       <h2 className="text-xl font-semibold text-gray-900">Doctor Profile</h2>
-                      <p className="text-gray-600 mt-1">Update your professional information</p>
+                      <div className="flex items-center space-x-2 mt-1">
+                        <p className="text-gray-600">Update your professional information</p>
+                        {formData.firstName && (
+                          <span className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full">
+                            Profile Active
+                          </span>
+                        )}
+                      </div>
                     </div>
-                    <button
-                      onClick={() => setIsEditing(!isEditing)}
-                      className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
-                        isEditing
-                          ? 'bg-red-100 text-red-600 hover:bg-red-200'
-                          : 'bg-cyan-600 text-white hover:bg-cyan-700'
-                      }`}
-                    >
-                      {isEditing ? (
-                        <>
-                          <X className="w-4 h-4" />
-                          <span>Cancel</span>
-                        </>
-                      ) : (
-                        <>
-                          <Edit className="w-4 h-4" />
-                          <span>Edit Profile</span>
-                        </>
-                      )}
-                    </button>
+                    <div className="flex items-center space-x-3">
+                      <button
+                        onClick={handleRefreshProfile}
+                        disabled={loading}
+                        className="flex items-center space-x-2 px-4 py-2 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors disabled:opacity-50"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                        <span>{loading ? 'Refreshing...' : 'Refresh'}</span>
+                      </button>
+                      <button
+                        onClick={() => setIsEditing(!isEditing)}
+                        className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
+                          isEditing
+                            ? 'bg-red-100 text-red-600 hover:bg-red-200'
+                            : 'bg-cyan-600 text-white hover:bg-cyan-700'
+                        }`}
+                      >
+                        {isEditing ? (
+                          <>
+                            <X className="w-4 h-4" />
+                            <span>Cancel</span>
+                          </>
+                        ) : (
+                          <>
+                            <Edit className="w-4 h-4" />
+                            <span>Edit Profile</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
                   </div>
                 </div>
 
@@ -510,32 +678,74 @@ export default function DoctorSettings() {
             {activeTab === 'changes' && (
               <div className="bg-white rounded-lg shadow-sm border border-gray-200">
                 <div className="p-6 border-b border-gray-200">
-                  <h2 className="text-xl font-semibold text-gray-900">Pending Changes</h2>
-                  <p className="text-gray-600 mt-1">Review changes waiting for approval</p>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h2 className="text-xl font-semibold text-gray-900">Pending Changes</h2>
+                      <p className="text-gray-600 mt-1">Review changes waiting for approval</p>
+                    </div>
+                    <button
+                      onClick={handleRefreshProfile}
+                      disabled={loading}
+                      className="flex items-center space-x-2 px-4 py-2 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors disabled:opacity-50"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                      <span>{loading ? 'Refreshing...' : 'Refresh'}</span>
+                    </button>
+                  </div>
                 </div>
                 <div className="p-6">
                   {pendingChanges.length > 0 ? (
                     <div className="space-y-4">
                       {pendingChanges.map((change) => (
-                        <div key={change.id} className="border border-gray-200 rounded-lg p-4">
+                        <div key={change.id} className={`border rounded-lg p-4 ${
+                          change.status === 'approved' ? 'border-green-200 bg-green-50' :
+                          change.status === 'rejected' ? 'border-red-200 bg-red-50' :
+                          'border-gray-200'
+                        }`}>
                           <div className="flex items-start justify-between mb-3">
                             <div>
                               <h3 className="font-medium text-gray-900">Profile Update Request</h3>
                               <p className="text-sm text-gray-500">Submitted: {new Date(change.submittedAt).toLocaleDateString()}</p>
+                              {change.reviewedAt && (
+                                <p className="text-sm text-gray-500">Reviewed: {new Date(change.reviewedAt).toLocaleDateString()}</p>
+                              )}
                             </div>
-                            <span className="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded-full">
-                              {change.status}
+                            <span className={`px-2 py-1 text-xs rounded-full ${
+                              change.status === 'approved' ? 'bg-green-100 text-green-800' :
+                              change.status === 'rejected' ? 'bg-red-100 text-red-800' :
+                              change.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                              'bg-gray-100 text-gray-800'
+                            }`}>
+                              {change.status === 'approved' ? '✅ Approved' :
+                               change.status === 'rejected' ? '❌ Rejected' :
+                               change.status === 'pending' ? '⏳ Pending' :
+                               change.status}
                             </span>
                           </div>
                           
+                          {change.status === 'approved' && (
+                            <div className="mb-3 p-2 bg-green-100 rounded text-sm text-green-800">
+                              ✅ Your profile has been updated with these changes!
+                            </div>
+                          )}
+                          
+                          {change.status === 'rejected' && change.adminNotes && (
+                            <div className="mb-3 p-2 bg-red-100 rounded text-sm text-red-800">
+                              ❌ Admin notes: {change.adminNotes}
+                            </div>
+                          )}
+                          
                           {/* Show changed fields */}
                           <div className="space-y-2 text-sm">
+                            <p className="font-medium text-gray-700 mb-2">Changed Fields:</p>
                             {Object.entries(change.proposedChanges).map(([key, value]) => (
                               <div key={key} className="grid grid-cols-3 gap-4">
                                 <span className="font-medium text-gray-700 capitalize">
                                   {key.replace(/([A-Z])/g, ' $1').trim()}:
                                 </span>
-                                <span className="text-gray-600 truncate">
+                                <span className="text-gray-600 truncate col-span-2">
                                   {typeof value === 'string' ? (value || 'Empty') : String(value)}
                                 </span>
                               </div>
