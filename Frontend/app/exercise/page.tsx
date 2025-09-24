@@ -5,10 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import Navbar from "@/components/Navbar";
-import { Footer } from "@/app/exercise/Footer";
+import { Footer } from '@/app/Footer';
 import { Dumbbell, Clock, ArrowRight, Search, Filter, Camera, Loader2 } from "lucide-react";
 import { useState, useEffect } from "react";
-import Sidebar from "../Sidebar";
+
 
 interface Exercise {
   id: string;
@@ -73,7 +73,6 @@ export default function Exercises() {
   if (loading) {
     return (
       <div className="flex flex-col min-h-screen bg-white text-black">
-        <Sidebar />
         <Navbar />
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
@@ -88,7 +87,6 @@ export default function Exercises() {
   if (error) {
     return (
       <div className="flex flex-col min-h-screen bg-white text-black">
-        <Sidebar />
         <Navbar />
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
@@ -105,13 +103,12 @@ export default function Exercises() {
   return (
     <div className="flex flex-col min-h-screen bg-white text-black">
       {/* Sidebar */}
-      <Sidebar />
       {/* Navbar */}
       <Navbar />
       
       <br /><br />
       
-      <section className="py-8 px-4 sm:px-6 lg:px-8 border-b">
+      <section className="py-8 px-4 sm:px-6 lg:px-8 border-b"style={{ marginTop: "3vh" }}>
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
             <div className="relative w-full md:w-96">

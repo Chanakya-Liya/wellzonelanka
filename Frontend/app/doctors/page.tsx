@@ -1,5 +1,4 @@
 "use client";
-import Sidebar from "@/app/Sidebar";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import Image from "next/image";
@@ -17,7 +16,7 @@ import { Marquee } from "@/components/magicui/marquee";
 import { useState } from "react";
 import { ChatDialog } from "@/components/chatbot/ChatDialog";
 import { ChatButton } from "@/components/chatbot/ChatButton";
-import { Footer } from "../Footer";
+import { Footer } from '@/app/Footer';
 
 const reviews = [
   { img: "/images/marquee_1.jpeg" },
@@ -66,7 +65,6 @@ export default function Home() {
     
     <div className="min-h-screen bg-white">
     <Navbar />
-    <Sidebar />
 
       <section className="container mx-auto px-4 py-20">
         
@@ -152,7 +150,7 @@ export default function Home() {
       </section>
 
       {/* Testimonials Section */}
-      <section className="py-20 px-4 relative overflow-hidden bg-white">
+      {/* <section className="py-20 px-4 relative overflow-hidden bg-white">
         <div className="container mx-auto">
           <motion.h2
             initial={{ opacity: 0 }}
@@ -186,7 +184,7 @@ export default function Home() {
         <div className="absolute -z-10 top-1/2 right-1/4 transform -translate-y-1/2">
           <div className="h-96 w-96 bg-blue-50 rounded-full blur-3xl"></div>
         </div>
-      </section>
+      </section> */}
 
       {/* CTA Section */}
       <section className="py-20 px-4 relative overflow-hidden bg-gradient-to-b from-white to-sky-50">

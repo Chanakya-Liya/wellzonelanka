@@ -3,14 +3,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Dumbbell, Users, Camera, ArrowRight } from "lucide-react";
 import Navbar from "@/components/Navbar";
-import { Footer } from "./Footer";
-import Sidebar from "../Sidebar";
+import { Footer } from '@/app/Footer';
 import Image from "next/image";
 
 export default function Home() {
   return (
     <div className="flex flex-col min-h-screen bg-white text-black">
-      <Sidebar />
       <Navbar />
 
       {/* Hero Section */}
@@ -124,7 +122,7 @@ export default function Home() {
       </section>
 
       {/* Testimonials Section */}
-      <section className="bg-gray-50 py-16 md:py-24" id="comments">
+      {/* <section className="bg-gray-50 py-16 md:py-24" id="comments">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-2xl sm:text-3xl font-bold">What Our Users Say</h2>
@@ -175,7 +173,7 @@ export default function Home() {
             ))}
           </div>
         </div>
-      </section>
+      </section> */}
 
       {/* CTA Section */}
       <section className="py-16 md:py-24 bg-gray-100" id="start">
@@ -202,7 +200,7 @@ export default function Home() {
         </div>
       </section>
       
-      <Footer />
+    <Footer />
     </div>
   );
 }

@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
+import { Footer } from '@/app/Footer';
 import { 
   User, 
   Calendar, 
@@ -256,13 +257,13 @@ export default function MySessions() {
                   placeholder="Search Sessions..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent w-80"
+                  className="pl-10 pr-4 py-2 border text-gray-800 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent w-80"
                 />
               </div>
-              <button className="flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+              {/* <button className="flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
                 <Filter className="w-4 h-4" />
                 <span>Filter</span>
-              </button>
+              </button> */}
             </div>
             <button className="px-4 py-2 bg-cyan-500 text-white rounded-lg hover:bg-cyan-600 transition-colors">
               New Session
@@ -365,6 +366,7 @@ export default function MySessions() {
           </div>
         </div>
       </div>
+    <Footer />
     </div>
   );
 }

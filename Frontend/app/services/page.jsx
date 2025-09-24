@@ -4,7 +4,6 @@ import Navbar from "../../components/Navbar";
 import Image from 'next/image';
 import Link from 'next/link';
 import { Footer } from "@/app/Footer";
-import Sidebar from '../Sidebar';
 import { withAuth } from '@/hooks/useAuth';
 
 function ServicesPage() {
@@ -237,7 +236,6 @@ function ServicesPage() {
       `}</style>
       
       <Navbar />
-      <Sidebar/>
       
       {/* Hero Section with Background Video */}
       <div className="relative h-screen w-full overflow-hidden">
@@ -445,7 +443,7 @@ function ServicesPage() {
         </div>
         
         {/* FAQ Section */}
-        <div className="mt-20">
+        {/* <div className="mt-20">
           <h2 className="text-3xl font-bold text-gray-800 text-center mb-10">Frequently Asked Questions</h2>
           <div className="max-w-3xl mx-auto">
             {[
@@ -472,7 +470,7 @@ function ServicesPage() {
               </div>
             ))}
           </div>
-        </div>
+        </div> */}
       </div>
       <Footer />
     </div>

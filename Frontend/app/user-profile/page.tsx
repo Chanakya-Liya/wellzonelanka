@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Navbar from "@/components/Navbar";
+import { Footer } from '@/app/Footer';
 import { withAuth } from "@/hooks/useAuth";
 import { firebaseDataService } from "@/lib/firebase-database";
 import { toast } from "sonner";
@@ -203,8 +204,8 @@ function UserProfile() {
       <Navbar />
       
       {/* Main Content with top padding for fixed navbar */}
-      <div className="pt-20 pb-12">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="pt-20 pb-12" >
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8" style={{ marginTop: '3vh' }}>
           {/* Header */}
           <div className="text-center mb-8">
             <h1 className="text-3xl font-bold text-gray-900">My Profile</h1>
@@ -299,11 +300,11 @@ function UserProfile() {
                   </div>
                 </div>
 
-                <div className="p-6">
+                <div className="p-6 text-gray-800">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* First Name */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-medium mb-2">
                         First Name
                       </label>
                       {isEditing ? (
@@ -314,7 +315,7 @@ function UserProfile() {
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
                         />
                       ) : (
-                        <div className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-gray-900">
+                        <div className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg">
                           {userData.firstName}
                         </div>
                       )}
@@ -322,7 +323,7 @@ function UserProfile() {
 
                     {/* Last Name */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-medium mb-2">
                         Last Name
                       </label>
                       {isEditing ? (
@@ -333,7 +334,7 @@ function UserProfile() {
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
                         />
                       ) : (
-                        <div className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-gray-900">
+                        <div className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg">
                           {userData.lastName}
                         </div>
                       )}
@@ -341,7 +342,7 @@ function UserProfile() {
 
                     {/* Email Address */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-medium mb-2">
                         Email Address
                       </label>
                       {isEditing ? (
@@ -352,7 +353,7 @@ function UserProfile() {
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
                         />
                       ) : (
-                        <div className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-gray-900">
+                        <div className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg">
                           {userData.email}
                         </div>
                       )}
@@ -360,7 +361,7 @@ function UserProfile() {
 
                     {/* Phone Number */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-medium mb-2">
                         Phone Number
                       </label>
                       {isEditing ? (
@@ -371,7 +372,7 @@ function UserProfile() {
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
                         />
                       ) : (
-                        <div className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-gray-900">
+                        <div className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg">
                           {userData.phone}
                         </div>
                       )}
@@ -380,7 +381,7 @@ function UserProfile() {
 
                   {/* Bio Section */}
                   <div className="mt-6">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium mb-2">
                       Bio
                     </label>
                     {isEditing ? (
@@ -392,7 +393,7 @@ function UserProfile() {
                         placeholder="Tell us about yourself..."
                       />
                     ) : (
-                      <div className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-gray-900 min-h-[100px]">
+                      <div className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg min-h-[100px]">
                         {userData.bio}
                       </div>
                     )}
@@ -538,6 +539,7 @@ function UserProfile() {
           </div>
         </div>
       </div>
+      <Footer />
     </div>
   );
 }

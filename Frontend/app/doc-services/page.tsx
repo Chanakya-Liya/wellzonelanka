@@ -16,7 +16,6 @@ import { motion } from "framer-motion";
 import { useState } from "react";
 import { ChatDialog } from "@/components/chatbot/ChatDialog";
 import { ChatButton } from "@/components/chatbot/ChatButton";
-import Sidebar from "@/app/Sidebar";
 import { Footer } from "../Footer";
 import { withAuth } from "@/hooks/useAuth";
 
@@ -156,7 +155,6 @@ function ServicesPage() {
   return (
     <div className="min-h-screen bg-white">
       <Navbar />
-      <Sidebar />
 
       {/* Hero Section */}
       <motion.section
@@ -274,7 +272,7 @@ function ServicesPage() {
             Our Treatment Process
           </motion.h2>
           <motion.div
-            className="grid md:grid-cols-4 gap-8"
+            className="grid md:grid-cols-4 gap-8 text-gray-800"
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true, amount: 0.1 }}
@@ -352,15 +350,15 @@ function ServicesPage() {
 
       {/* CTA Section */}
       <motion.section
-        className="py-16 px-4 bg-white"
+        className="py-16 px-4 bg-cyan-100"
         initial={{ opacity: 0 }}
         whileInView={{ opacity: 1 }}
         transition={{ duration: 0.8 }}
         viewport={{ once: true }}
       >
-        <div className="max-w-3xl mx-auto text-center">
+        <div className="max-w-3xl mx-auto text-center text-gray-800">
           <motion.div
-            className="bg-primary text-white rounded-lg p-8"
+            className="bg-primary text-black rounded-lg p-8 shadow-lg"
             initial={{ y: 50, opacity: 0 }}
             whileInView={{ y: 0, opacity: 1 }}
             transition={{
@@ -379,7 +377,7 @@ function ServicesPage() {
             }}
           >
             <h3 className="text-2xl font-semibold">Start Your Recovery Today</h3>
-            <p className="mt-2">
+            <p className="mt-2 ">
               Book your appointment with our expert physiotherapists and begin
               your journey towards better health.
             </p>

@@ -229,11 +229,11 @@ export default function DoctorsPage() {
         {doctors.length > 0 && (
           <section className="relative w-full h-[50vh] sm:h-[60vh] bg-gradient-to-r from-blue-100 to-cyan-100 flex items-center justify-center overflow-hidden">
             <div className="container mx-auto px-4 relative z-10 flex flex-col md:flex-row items-center justify-center text-center md:text-left">
-              <div className="w-full md:w-1/2 p-4">
+              <div className="w-full md:w-1/2 p-4" style={{ marginLeft: '5vw' }}>
                 <h2 className="text-2xl sm:text-3xl font-bold text-gray-800">
                   Dr. {recommendedDoctor.firstName} {recommendedDoctor.lastName}
                 </h2>
-                <p className="text-gray-600 mt-2 text-sm sm:text-base">
+                <p className="text-gray-800 mt-2 text-sm sm:text-base">
                   Most recommended {recommendedDoctor.specialization} for August
                 </p>
                 <button 
@@ -280,7 +280,7 @@ export default function DoctorsPage() {
                   placeholder="Search doctors..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full px-4 py-2 pl-10 border rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-4 py-2 pl-10 border rounded-full focus:outline-none text-gray-800 focus:ring-2 focus:ring-blue-500"
                 />
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
               </div>

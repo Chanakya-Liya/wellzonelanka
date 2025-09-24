@@ -27,7 +27,7 @@ import {
   IoIosChatbubbles,
   IoIosHeart,
 } from "react-icons/io";
-import Sidebar from "./Sidebar";
+
 
 export default function Home() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -115,7 +115,6 @@ export default function Home() {
       {/* Navigation Bar - Kept exactly as original */}
 
       <Navbar />
-      <Sidebar />
 
       {/* Improved Hero Section */}
       <div className="relative h-screen">
@@ -626,16 +625,16 @@ export default function Home() {
       </div>
 
       {/* Call to Action - Enhanced with pulse and staggered animations */}
-      <div className="bg-cyan-600 py-16">
+      <div className="bg-white-600 py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-4xl font-bold text-white mb-6 animate-fade-up opacity-0">
+          <h2 className="text-4xl font-bold text-black mb-6 animate-fade-up opacity-0">
             <span className="relative inline-block">
               Start Your Transformation Today
               <span className="absolute -bottom-2 left-0 right-0 h-1 bg-white rounded animate-pulse-width"></span>
             </span>
           </h2>
           <p
-            className="text-xl text-cyan-100 mb-10 max-w-3xl mx-auto animate-fade-up opacity-0"
+            className="text-xl text-gray-800 mb-10 max-w-3xl mx-auto animate-fade-up opacity-0"
             style={{ animationDelay: "0.2s" }}
           >
             Join WellZone Lanka for a holistic approach to your health and
@@ -646,10 +645,10 @@ export default function Home() {
             {/* Fixed the button tags here */}
 
             <button
-              className="group relative overflow-hidden rounded-full bg-gradient-to-r from-blue-500  border-2 border-white text-white px-8 py-4 text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-300"
+              className="group relative overflow-hidden rounded-full bg-cyan-600 border-white text-white px-8 py-4 text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-300"
               onClick={handleJoinUsClick}
             >
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-cyan-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-cyan-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
               <span className="flex items-center justify-center relative z-10">
                 Join Us Now
               </span>

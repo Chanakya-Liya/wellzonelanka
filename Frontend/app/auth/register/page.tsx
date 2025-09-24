@@ -165,7 +165,7 @@ export default function Register() {
       </div>
 
       {/* Main Content */}
-      <div className="relative z-10 max-w-7xl mx-auto pt-6">
+      <div className="relative z-10 max-w-7xl mx-auto pt-6" style={{ marginTop: "3vh" }}>
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start p-6" style={{ paddingTop: "60px" }}>
 
           {/* Left Side - Image Slideshow (7 columns) */}

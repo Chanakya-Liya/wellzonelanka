@@ -4,7 +4,6 @@ import Link from "next/link";
 import { Stethoscope, Dumbbell } from "lucide-react";
 import { BackgroundVideo } from "@/app/gym-doc-home/background-video";
 import Navbar from "@/components/Navbar";
-import Sidebar from "@/app/Sidebar";
 
 export default function Home() {
   return (
@@ -14,7 +13,6 @@ export default function Home() {
         <Navbar />
       </div>
       <div className="flex">
-        <Sidebar />
         <div className="flex-1 flex flex-col items-center justify-center min-h-screen p-4">
           <div className="text-center mb-12 text-white">
             <h1 className="text-4xl font-bold mb-2">Wellzone Lanka</h1>

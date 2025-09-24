@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
+import { Footer } from '@/app/Footer';
 import { 
   User, 
   Calendar, 
@@ -183,7 +184,7 @@ export default function TrainerDashboard() {
           <div className="max-w-6xl mx-auto">
             {/* Welcome Header */}
             <div className="mb-8">
-              <h1 className="text-3xl font-bold text-gray-900">Welcome back, {trainerName.split(' ')[0]}!</h1>
+              <h1 className="text-3xl font-bold text-gray-900">Welcome Back, {trainerName.split(' ')[0]}!</h1>
               <p className="text-gray-600 mt-2">Here's your training overview for today</p>
             </div>
 
@@ -301,6 +302,7 @@ export default function TrainerDashboard() {
           </div>
         </div>
       </div>
+     <Footer />
     </div>
   );
 }

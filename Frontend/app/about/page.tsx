@@ -13,7 +13,6 @@ import {
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import { Footer } from "@/app/Footer";
-import Sidebar from "@/app/Sidebar";
 import Image from "next/image";
 
 export default function About() {
@@ -57,7 +56,6 @@ export default function About() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-white to-blue-50">
       <Navbar />
-      <Sidebar />
 
       {/* Enhanced Hero Section with Optimized Background */}
       <div className="relative w-full h-[80vh] overflow-hidden">

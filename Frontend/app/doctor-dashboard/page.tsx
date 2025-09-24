@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
+import { Footer } from '@/app/Footer';
 import { 
   User, 
   Calendar, 
@@ -132,8 +133,8 @@ export default function DoctorDashboard() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Navbar */}
-      <Navbar />
+    {/* Navbar */}
+    <Navbar />
       
       {/* Main Dashboard Container with top padding for fixed navbar */}
       <div className="flex pt-20 min-h-screen bg-gray-50">
@@ -339,6 +340,7 @@ export default function DoctorDashboard() {
         </div>
       </div>
     </div>
+    <Footer />
     </div>
   );
 }
