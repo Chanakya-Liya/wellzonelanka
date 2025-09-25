@@ -28,7 +28,8 @@ export async function POST(request: NextRequest) {
       role, 
       licenseNumber, 
       experience, 
-      specialization 
+      specialization,
+      certificationFiles
     } = body;
 
     console.log('Firebase registration attempt:', { email, role, firstName, lastName });
@@ -98,6 +99,7 @@ export async function POST(request: NextRequest) {
         licenseNumber,
         experience: experienceNum,
         specialization,
+        certificationFiles: certificationFiles || [],
       };
     }
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { Search, User, Dumbbell, Users, Link2, MoreVertical, Download, ChevronDown, LogOut, Home, TrendingUp, Activity, UserCheck } from 'lucide-react';
+import { Search, User, Dumbbell, Users, Link2, MoreVertical, Download, ChevronDown, LogOut, Home, TrendingUp, Activity, UserCheck, Trash2, FileText, ExternalLink } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import AddExerciseModal from './add-exercises/popup/page';
 import { firebaseDataService } from '@/lib/firebase-database';
@@ -69,6 +69,51 @@ interface Exercise {
   bodyPart: string;
   muscles: string;
   description: string;
+}
+
+// File Download Component
+function FileDownloadSection({ files, userType }: { files?: string[], userType: string }) {
+  if (!files || files.length === 0) {
+    return (
+      <div className="mt-3 p-2 bg-gray-50 rounded border text-sm text-gray-500">
+        No certification files uploaded
+      </div>
+    );
+  }
+
+  const handleDownload = (fileUrl: string, index: number) => {
+    window.open(fileUrl, '_blank');
+  };
+
+  return (
+    <div className="mt-3">
+      <p className="text-sm font-medium text-gray-700 mb-2">📁 Certification Files:</p>
+      <div className="space-y-1">
+        {files.map((fileUrl, index) => (
+          <div key={index} className="flex items-center gap-2 p-2 bg-blue-50 rounded border">
+            <FileText className="w-4 h-4 text-blue-600" />
+            <span className="text-sm text-blue-800 flex-1">
+              {userType} Certificate {index + 1}
+            </span>
+            <button
+              onClick={() => handleDownload(fileUrl, index)}
+              className="flex items-center gap-1 px-2 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 transition-colors"
+            >
+              <Download className="w-3 h-3" />
+              Download
+            </button>
+            <button
+              onClick={() => window.open(fileUrl, '_blank')}
+              className="flex items-center gap-1 px-2 py-1 bg-gray-600 text-white text-xs rounded hover:bg-gray-700 transition-colors"
+            >
+              <ExternalLink className="w-3 h-3" />
+              View
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 // Home Dashboard Component
@@ -1393,6 +1438,12 @@ This is a ${doctor.type === 'signup' ? 'new doctor signup' : 'profile change'} r
                     </p>
                   </div>
                   
+                  {/* File Download Section */}
+                  <FileDownloadSection 
+                    files={(doctor as any).certificationFiles} 
+                    userType="Doctor" 
+                  />
+                  
                   {!doctor.isApproved && (
                     <div className="flex gap-3 mt-4">
                       <button 
@@ -2006,6 +2057,12 @@ function TrainerAdminPage() {
                     </p>
                   </div>
                   
+                  {/* File Download Section */}
+                  <FileDownloadSection 
+                    files={(trainer as any).certificationFiles} 
+                    userType="Trainer" 
+                  />
+                  
                   {!trainer.isApproved && (
                     <div className="flex gap-3 mt-4">
                       <button 
@@ -2098,38 +2155,113 @@ This is a new trainer signup request that requires admin approval.`);
 // Add Exercises Component
 function AddExercisesPage() {
   const [searchQuery, setSearchQuery] = useState('');
-  const [exercises, setExercises] = useState<Exercise[]>([
-    {
-      id: '1',
-      name: 'Squats',
-      bodyPart: 'Lower Body',
-      muscles: 'Quadriceps, Hamstrings, Glutes',
-      description: 'A classic bodyweight exercise that targets the chest, shoulders, and triceps.'
-    },
-    {
-      id: '2',
-      name: 'Push-ups',
-      bodyPart: 'Upper Body',
-      muscles: 'Chest, Shoulders, Triceps',
-      description: 'A fundamental upper body exercise that builds strength and stability.'
-    }
-  ]);
+  const [exercises, setExercises] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
+  // Fetch exercises from Firebase on component mount
+  useEffect(() => {
+    const fetchExercises = async () => {
+      try {
+        const response = await fetch('/api/admin/exercises');
+        const data = await response.json();
+        
+        if (data.success) {
+          setExercises(data.exercises);
+        } else {
+          console.error('Failed to fetch exercises:', data.error);
+        }
+      } catch (error) {
+        console.error('Error fetching exercises:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchExercises();
+  }, []);
+
   const filteredExercises = exercises.filter(exercise =>
-    exercise.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    exercise.bodyPart.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    exercise.muscles.toLowerCase().includes(searchQuery.toLowerCase())
+    exercise.exerciseName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    exercise.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    exercise.difficulty?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (exercise.target && exercise.target.some((t: string) => t.toLowerCase().includes(searchQuery.toLowerCase())))
   );
 
-  const handleAddExercise = (exerciseData: Omit<Exercise, 'id'>) => {
-    const newExercise: Exercise = {
-      id: (exercises.length + 1).toString(),
-      ...exerciseData
-    };
-    setExercises([...exercises, newExercise]);
-    setIsModalOpen(false);
+  const handleAddExercise = async (exerciseData: {
+    exerciseName: string;
+    description: string;
+    difficulty: string;
+    duration: string;
+    target: string[];
+    image?: string;
+    url?: string;
+  }) => {
+    try {
+      const response = await fetch('/api/admin/exercises', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(exerciseData),
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        // Refresh exercises list
+        const refreshResponse = await fetch('/api/admin/exercises');
+        const refreshData = await refreshResponse.json();
+        
+        if (refreshData.success) {
+          setExercises(refreshData.exercises);
+        }
+        
+        setIsModalOpen(false);
+        alert('Exercise added successfully!');
+      } else {
+        alert('Failed to add exercise: ' + data.error);
+      }
+    } catch (error) {
+      console.error('Error adding exercise:', error);
+      alert('An error occurred while adding the exercise.');
+    }
   };
+
+  const handleDeleteExercise = async (exerciseId: string) => {
+    const confirmed = window.confirm('Are you sure you want to delete this exercise?');
+    if (!confirmed) return;
+
+    try {
+      const response = await fetch(`/api/admin/exercises?exerciseId=${exerciseId}`, {
+        method: 'DELETE',
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        // Remove exercise from local state
+        setExercises(exercises.filter(exercise => exercise.id !== exerciseId));
+        alert('Exercise deleted successfully!');
+      } else {
+        alert('Failed to delete exercise: ' + data.error);
+      }
+    } catch (error) {
+      console.error('Error deleting exercise:', error);
+      alert('An error occurred while deleting the exercise.');
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="p-8">
+        <div className="flex items-center justify-center py-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          <span className="ml-3 text-gray-600">Loading exercises...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-8">
@@ -2176,27 +2308,94 @@ function AddExercisesPage() {
           filteredExercises.map((exercise) => (
             <div key={exercise.id} className="bg-white rounded-lg shadow-sm p-6 flex items-start justify-between hover:shadow-md transition-shadow">
               <div className="flex items-start gap-4">
-                <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center">
-                  <Dumbbell className="w-6 h-6 text-gray-600" />
+                {exercise.image ? (
+                  <img 
+                    src={exercise.image} 
+                    alt={exercise.exerciseName}
+                    className="w-16 h-16 object-cover rounded-lg"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = 'none';
+                      (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
+                    }}
+                  />
+                ) : null}
+                <div className={`w-16 h-16 bg-gray-200 rounded-lg flex items-center justify-center ${exercise.image ? 'hidden' : ''}`}>
+                  <Dumbbell className="w-8 h-8 text-gray-600" />
                 </div>
-                <div>
-                  <div className="flex items-center gap-3">
-                    <h3 className="font-semibold text-lg text-gray-800">{exercise.name}</h3>
-                    <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">
-                      {exercise.bodyPart}
+                <div className="flex-1">
+                  <div className="flex items-center gap-3 mb-2">
+                    <h3 className="font-semibold text-lg text-gray-800">{exercise.exerciseName}</h3>
+                    <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                      exercise.difficulty === 'Beginner' ? 'bg-green-100 text-green-800' :
+                      exercise.difficulty === 'Intermediate' ? 'bg-yellow-100 text-yellow-800' :
+                      'bg-red-100 text-red-800'
+                    }`}>
+                      {exercise.difficulty}
                     </span>
                   </div>
-                  <p className="text-gray-600 text-sm mt-1">
-                    <span className="font-medium">Muscles:</span> {exercise.muscles}
-                  </p>
-                  <p className="text-gray-500 mt-2">{exercise.description}</p>
+                  
+                  <div className="space-y-1 mb-3">
+                    <p className="text-gray-600 text-sm">
+                      <span className="font-medium">Duration:</span> {exercise.duration}
+                    </p>
+                    <p className="text-gray-600 text-sm">
+                      <span className="font-medium">Exercise ID:</span> {exercise.id}
+                    </p>
+                    {exercise.target && exercise.target.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {exercise.target.map((target: string, index: number) => (
+                          <span key={index} className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs">
+                            {target}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  
+                  <p className="text-gray-500 text-sm line-clamp-2">{exercise.description}</p>
+                  
+                  {exercise.url && (
+                    <div className="flex gap-2 mt-3">
+                      <a 
+                        href={exercise.url} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                      >
+                        🎥 Watch Video
+                      </a>
+                    </div>
+                  )}
                 </div>
               </div>
-              <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                <svg className="w-5 h-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                </svg>
-              </button>
+              
+              <div className="flex items-center gap-2">
+                <button 
+                  onClick={() => {
+                    const exerciseDetails = `Exercise Details:
+Name: ${exercise.exerciseName}
+ID: ${exercise.id}
+Difficulty: ${exercise.difficulty}
+Duration: ${exercise.duration}
+Target: ${exercise.target ? exercise.target.join(', ') : 'Not specified'}
+Description: ${exercise.description}
+Created: ${exercise.createdAt ? new Date(exercise.createdAt).toLocaleDateString() : 'Not available'}
+Updated: ${exercise.updatedAt ? new Date(exercise.updatedAt).toLocaleDateString() : 'Not available'}`;
+                    alert(exerciseDetails);
+                  }}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                  title="View Details"
+                >
+                  <Search className="w-5 h-5 text-gray-500" />
+                </button>
+                <button 
+                  onClick={() => handleDeleteExercise(exercise.id)}
+                  className="p-2 hover:bg-red-50 rounded-lg transition-colors"
+                  title="Delete Exercise"
+                >
+                  <Trash2 className="w-5 h-5 text-red-500" />
+                </button>
+              </div>
             </div>
           ))
         )}
