@@ -379,7 +379,9 @@ export const getDoctorProfile = async (doctorId: string): Promise<any> => {
         profileImage: doctorData.profileImage || '',
         isApproved: doctorData.isApproved || false,
         role: doctorData.role || 'doctor',
-        createdAt: doctorData.createdAt || null
+        createdAt: doctorData.createdAt || null,
+        updatedAt: doctorData.updatedAt || null,
+        lastProfileUpdate: doctorData.lastProfileUpdate || null
       };
     } else {
       console.log('❌ Doctor profile not found');
@@ -396,7 +398,7 @@ export const submitDoctorProfileChanges = async (doctorId: string, changes: any)
   try {
     console.log('🔄 Submitting doctor profile changes for approval:', changes);
     
-    const pendingChangesRef = collection(db, 'pendingChanges');
+    const pendingChangesRef = collection(db, 'pending-changes');
     const changeDoc = {
       doctorId: doctorId,
       changeType: 'doctorProfile',
@@ -418,32 +420,50 @@ export const submitDoctorProfileChanges = async (doctorId: string, changes: any)
   }
 };
 
-// Get pending changes for a doctor
+// Get all profile changes for a doctor (pending, approved, rejected)
 export const getDoctorPendingChanges = async (doctorId: string): Promise<any[]> => {
   try {
-    console.log('🔍 Getting pending changes for doctorId:', doctorId);
+    console.log('🔍 Getting all profile changes for doctorId:', doctorId);
     
-    const pendingChangesRef = collection(db, 'pendingChanges');
+    const pendingChangesRef = collection(db, 'pending-changes');
     const q = query(
       pendingChangesRef,
-      where('doctorId', '==', doctorId),
-      where('status', '==', 'pending')
+      where('doctorId', '==', doctorId)
     );
     
     const querySnapshot = await getDocs(q);
-    const pendingChanges: any[] = [];
+    const allChanges: any[] = [];
     
     querySnapshot.forEach((doc) => {
-      pendingChanges.push({
+      const data = doc.data();
+      
+      // Convert Firestore timestamps to strings if needed
+      const submittedAt = data.submittedAt?.toDate?.()?.toISOString() || data.submittedAt;
+      const reviewedAt = data.reviewedAt?.toDate?.()?.toISOString() || data.reviewedAt;
+      
+      allChanges.push({
         id: doc.id,
-        ...doc.data()
+        ...data,
+        submittedAt,
+        reviewedAt
       });
     });
     
-    console.log('📋 Found pending changes:', pendingChanges.length);
-    return pendingChanges;
+    // Sort by submission date (newest first)
+    allChanges.sort((a, b) => 
+      new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()
+    );
+    
+    console.log('📋 Found profile changes:', allChanges.length);
+    console.log('📊 Changes by status:', {
+      pending: allChanges.filter(c => c.status === 'pending').length,
+      approved: allChanges.filter(c => c.status === 'approved').length,
+      rejected: allChanges.filter(c => c.status === 'rejected').length
+    });
+    
+    return allChanges;
   } catch (error) {
-    console.error('Error fetching pending changes:', error);
+    console.error('Error fetching profile changes:', error);
     throw error;
   }
 };

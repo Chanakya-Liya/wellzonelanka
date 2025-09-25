@@ -43,6 +43,7 @@ export default function TrainerSettings() {
   const [loading, setLoading] = useState(false);
   const [originalData, setOriginalData] = useState<any>({});
   const [pendingChanges, setPendingChanges] = useState<PendingChange[]>([]);
+  const [profileUpdateMessage, setProfileUpdateMessage] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     fullName: "Coach Sarah Martinez",
     email: "sarah.martinez@wellzone.com",
@@ -63,26 +64,14 @@ export default function TrainerSettings() {
       const userData = JSON.parse(currentUser);
       if (userData.firstName && userData.lastName) {
         setTrainerName(`${userData.firstName} ${userData.lastName}`);
-        const newFormData = {
-          fullName: `${userData.firstName} ${userData.lastName}`,
-          email: userData.email || '',
-          phone: userData.phone || '',
-          licenseNumber: userData.licenseNumber || '',
-          specialization: userData.specialization || '',
-          experience: userData.experience?.toString() || '',
-          bio: userData.bio || '',
-          address: userData.address || '',
-          education: userData.education || '',
-          certifications: userData.certifications || ''
-        };
-        setFormData(newFormData);
-        setOriginalData(newFormData); // Store original data for comparison
       }
       if (userData.email) {
         setTrainerEmail(userData.email);
       }
       if (userData.id) {
         setTrainerId(userData.id);
+        // Fetch latest profile data from database
+        fetchLatestTrainerProfile(userData.id);
       }
     }
   }, []);
@@ -90,8 +79,85 @@ export default function TrainerSettings() {
   useEffect(() => {
     if (trainerId) {
       fetchPendingChanges();
+      
+      // Set up polling to check for approved profile changes
+      const checkForProfileUpdates = async () => {
+        try {
+          console.log('🔄 Checking for trainer profile updates...');
+          
+          // Fetch latest trainer profile
+          const latestProfile = await fetchLatestTrainerProfile(trainerId);
+          
+          if (latestProfile && latestProfile.lastProfileUpdate) {
+            const lastUpdate = new Date(latestProfile.lastProfileUpdate);
+            const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+            
+            // If profile was updated in the last 5 minutes, refresh the data
+            if (lastUpdate > fiveMinutesAgo) {
+              console.log('✅ Trainer profile was recently updated, refreshing data...');
+              
+              // Show success message
+              setProfileUpdateMessage('✅ Your profile has been updated! The admin approved your changes.');
+              setTimeout(() => setProfileUpdateMessage(null), 10000); // Hide after 10 seconds
+              
+              // Refresh pending changes
+              fetchPendingChanges();
+            }
+          }
+        } catch (error) {
+          console.error('Error checking for profile updates:', error);
+        }
+      };
+
+      // Check for updates every 30 seconds
+      const updateInterval = setInterval(checkForProfileUpdates, 30000);
+
+      // Cleanup interval on component unmount
+      return () => {
+        clearInterval(updateInterval);
+      };
     }
   }, [trainerId]);
+
+  const fetchLatestTrainerProfile = async (id: string) => {
+    try {
+      console.log('🔍 Fetching latest trainer profile for ID:', id);
+      
+      const response = await fetch(`/api/trainer-profile/${id}`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.data) {
+          const trainerProfile = data.data;
+          console.log('👨‍💪 Trainer profile loaded:', trainerProfile);
+          
+          const newFormData = {
+            fullName: trainerProfile.fullName || `${trainerProfile.firstName} ${trainerProfile.lastName}`,
+            email: trainerProfile.email || '',
+            phone: trainerProfile.phone || '',
+            licenseNumber: trainerProfile.licenseNumber || '',
+            specialization: trainerProfile.specialization || '',
+            experience: trainerProfile.experience?.toString() || '',
+            bio: trainerProfile.bio || '',
+            address: trainerProfile.address || '',
+            education: trainerProfile.education || '',
+            certifications: trainerProfile.certifications || ''
+          };
+          
+          setFormData(newFormData);
+          setOriginalData(newFormData);
+          
+          // Update displayed name and email
+          setTrainerName(trainerProfile.fullName || `${trainerProfile.firstName} ${trainerProfile.lastName}`);
+          setTrainerEmail(trainerProfile.email || '');
+          
+          return trainerProfile;
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching trainer profile:', error);
+    }
+    return null;
+  };
 
   const fetchPendingChanges = async () => {
     if (!trainerId) return;
@@ -165,6 +231,41 @@ export default function TrainerSettings() {
     } catch (error) {
       console.error('Error submitting changes:', error);
       alert('Failed to submit changes. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRefreshProfile = async () => {
+    if (!trainerId) return;
+    
+    try {
+      setLoading(true);
+      console.log('🔄 Manually refreshing trainer profile data...');
+      
+      // Fetch latest trainer profile
+      const latestProfile = await fetchLatestTrainerProfile(trainerId);
+      
+      if (latestProfile) {
+        console.log('👨‍💪 Latest trainer profile loaded:', latestProfile);
+        
+        // Check if profile was recently updated
+        if (latestProfile.lastProfileUpdate) {
+          const lastUpdate = new Date(latestProfile.lastProfileUpdate);
+          const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+          
+          if (lastUpdate > oneHourAgo) {
+            setProfileUpdateMessage('✅ Profile data refreshed! Your profile is up to date.');
+            setTimeout(() => setProfileUpdateMessage(null), 5000);
+          }
+        }
+      }
+      
+      // Refresh pending changes
+      fetchPendingChanges();
+      
+    } catch (error) {
+      console.error('Error refreshing profile:', error);
     } finally {
       setLoading(false);
     }
@@ -247,6 +348,35 @@ export default function TrainerSettings() {
               <p className="text-gray-600 mt-2">Manage your trainer profile and account settings</p>
             </div>
 
+            {/* Profile Update Success Message */}
+            {profileUpdateMessage && (
+              <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+                <div className="flex items-start">
+                  <div className="flex-shrink-0">
+                    <svg className="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  <div className="ml-3">
+                    <p className="text-sm font-medium text-green-800">
+                      {profileUpdateMessage}
+                    </p>
+                  </div>
+                  <div className="ml-auto pl-3">
+                    <div className="-mx-1.5 -my-1.5">
+                      <button
+                        onClick={() => setProfileUpdateMessage(null)}
+                        className="inline-flex bg-green-50 rounded-md p-1.5 text-green-500 hover:bg-green-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-green-50 focus:ring-green-600"
+                      >
+                        <span className="sr-only">Dismiss</span>
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Settings Tabs */}
             <div className="mb-8">
               <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg">
@@ -282,26 +412,38 @@ export default function TrainerSettings() {
                       <h2 className="text-xl font-semibold text-gray-900">Trainer Profile</h2>
                       <p className="text-gray-600 mt-1">Update your professional information</p>
                     </div>
-                    <button
-                      onClick={() => setIsEditing(!isEditing)}
-                      className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
-                        isEditing
-                          ? 'bg-red-100 text-red-600 hover:bg-red-200'
-                          : 'bg-cyan-600 text-white hover:bg-cyan-700'
-                      }`}
-                    >
-                      {isEditing ? (
-                        <>
-                          <X className="w-4 h-4" />
-                          <span>Cancel</span>
-                        </>
-                      ) : (
-                        <>
-                          <Edit className="w-4 h-4" />
-                          <span>Edit Profile</span>
-                        </>
-                      )}
-                    </button>
+                    <div className="flex items-center space-x-3">
+                      <button
+                        onClick={handleRefreshProfile}
+                        disabled={loading}
+                        className="flex items-center space-x-2 px-4 py-2 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors disabled:opacity-50"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                        <span>{loading ? 'Refreshing...' : 'Refresh'}</span>
+                      </button>
+                      <button
+                        onClick={() => setIsEditing(!isEditing)}
+                        className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
+                          isEditing
+                            ? 'bg-red-100 text-red-600 hover:bg-red-200'
+                            : 'bg-cyan-600 text-white hover:bg-cyan-700'
+                        }`}
+                      >
+                        {isEditing ? (
+                          <>
+                            <X className="w-4 h-4" />
+                            <span>Cancel</span>
+                          </>
+                        ) : (
+                          <>
+                            <Edit className="w-4 h-4" />
+                            <span>Edit Profile</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
                   </div>
                 </div>
 
@@ -527,13 +669,25 @@ export default function TrainerSettings() {
                       <h2 className="text-xl font-semibold text-gray-900">Pending Changes</h2>
                       <p className="text-gray-600 mt-1">Review changes waiting for approval</p>
                     </div>
-                    <button
-                      onClick={fetchPendingChanges}
-                      className="flex items-center space-x-2 px-4 py-2 text-cyan-600 border border-cyan-600 rounded-lg hover:bg-cyan-50 transition-colors"
-                    >
-                      <Clock className="w-4 h-4" />
-                      <span>Refresh</span>
-                    </button>
+                    <div className="flex items-center space-x-3">
+                      <button
+                        onClick={handleRefreshProfile}
+                        disabled={loading}
+                        className="flex items-center space-x-2 px-4 py-2 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors disabled:opacity-50"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                        <span>{loading ? 'Refreshing...' : 'Refresh'}</span>
+                      </button>
+                      <button
+                        onClick={fetchPendingChanges}
+                        className="flex items-center space-x-2 px-4 py-2 text-cyan-600 border border-cyan-600 rounded-lg hover:bg-cyan-50 transition-colors"
+                      >
+                        <Clock className="w-4 h-4" />
+                        <span>Refresh Changes</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
                 <div className="p-6">
@@ -546,7 +700,11 @@ export default function TrainerSettings() {
                   ) : (
                     <div className="space-y-6">
                       {pendingChanges.map((change) => (
-                        <div key={change.id} className="border border-gray-200 rounded-lg p-6">
+                        <div key={change.id} className={`border rounded-lg p-6 ${
+                          change.status === 'approved' ? 'border-green-200 bg-green-50' :
+                          change.status === 'rejected' ? 'border-red-200 bg-red-50' :
+                          'border-gray-200'
+                        }`}>
                           <div className="flex items-center justify-between mb-4">
                             <div className="flex items-center space-x-3">
                               <div className={`flex items-center space-x-2 px-3 py-1 rounded-full text-sm font-medium ${
@@ -559,7 +717,12 @@ export default function TrainerSettings() {
                                 {change.status === 'pending' && <AlertCircle className="w-4 h-4" />}
                                 {change.status === 'approved' && <CheckCircle className="w-4 h-4" />}
                                 {change.status === 'rejected' && <XCircle className="w-4 h-4" />}
-                                <span className="capitalize">{change.status}</span>
+                                <span className="capitalize">
+                                  {change.status === 'approved' ? '✅ Approved' :
+                                   change.status === 'rejected' ? '❌ Rejected' :
+                                   change.status === 'pending' ? '⏳ Pending' :
+                                   change.status}
+                                </span>
                               </div>
                               <span className="text-sm text-gray-500">
                                 Profile Update Request
@@ -567,8 +730,29 @@ export default function TrainerSettings() {
                             </div>
                             <div className="text-sm text-gray-500">
                               Submitted: {new Date(change.submittedAt).toLocaleDateString()}
+                              {change.reviewedAt && (
+                                <div>Reviewed: {new Date(change.reviewedAt).toLocaleDateString()}</div>
+                              )}
                             </div>
                           </div>
+
+                          {change.status === 'approved' && (
+                            <div className="mb-4 p-3 bg-green-100 rounded text-sm text-green-800">
+                              ✅ Your profile has been updated with these changes! 
+                              <button 
+                                onClick={handleRefreshProfile}
+                                className="ml-2 underline hover:no-underline"
+                              >
+                                Refresh to see updates
+                              </button>
+                            </div>
+                          )}
+                          
+                          {change.status === 'rejected' && change.adminNotes && (
+                            <div className="mb-4 p-3 bg-red-100 rounded text-sm text-red-800">
+                              ❌ Admin notes: {change.adminNotes}
+                            </div>
+                          )}
 
                           {/* Changed Fields */}
                           <div className="mb-4">
@@ -590,20 +774,26 @@ export default function TrainerSettings() {
                                 };
                                 
                                 return (
-                                  <div key={field} className="bg-gray-50 p-3 rounded-lg">
+                                  <div key={field} className="bg-white p-3 rounded-lg border">
                                     <div className="font-medium text-sm text-gray-700 mb-2">
                                       {fieldLabels[field] || field}
                                     </div>
                                     <div className="space-y-2">
                                       <div>
                                         <span className="text-xs text-gray-500">Current:</span>
-                                        <p className="text-sm text-gray-600 bg-white p-2 rounded border">
+                                        <p className="text-sm text-gray-600 bg-gray-50 p-2 rounded border">
                                           {originalValue || 'Not set'}
                                         </p>
                                       </div>
                                       <div>
-                                        <span className="text-xs text-green-600">Proposed:</span>
-                                        <p className="text-sm text-green-700 bg-green-50 p-2 rounded border border-green-200">
+                                        <span className={`text-xs ${change.status === 'approved' ? 'text-green-600' : 'text-blue-600'}`}>
+                                          {change.status === 'approved' ? 'Applied:' : 'Proposed:'}
+                                        </span>
+                                        <p className={`text-sm p-2 rounded border ${
+                                          change.status === 'approved' 
+                                            ? 'text-green-700 bg-green-50 border-green-200' 
+                                            : 'text-blue-700 bg-blue-50 border-blue-200'
+                                        }`}>
                                           {newValue as string}
                                         </p>
                                       </div>
@@ -615,7 +805,7 @@ export default function TrainerSettings() {
                           </div>
 
                           {/* Admin Notes */}
-                          {change.adminNotes && (
+                          {change.adminNotes && change.status !== 'rejected' && (
                             <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                               <h5 className="font-medium text-blue-900 mb-2">Admin Notes:</h5>
                               <p className="text-sm text-blue-800">{change.adminNotes}</p>

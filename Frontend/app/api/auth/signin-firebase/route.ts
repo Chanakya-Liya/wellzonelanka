@@ -35,8 +35,24 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if professional account is approved
-    if (user.role !== 'user' && !user.isApproved) {
+    // Check if user account is suspended (not applicable to admins)
+    if (user.role !== 'admin' && user.isApproved === false && user.role === 'user') {
+      return NextResponse.json(
+        { message: 'Your account has been suspended by the admin. Please contact support for assistance.' },
+        { status: 403 }
+      );
+    }
+
+    // Check if professional account is suspended (not applicable to admins)
+    if (user.role !== 'admin' && user.isApproved === false && (user.role === 'doctor' || user.role === 'trainer')) {
+      return NextResponse.json(
+        { message: 'Your account has been declined by the admin. Please contact support for assistance.' },
+        { status: 403 }
+      );
+    }
+
+    // Check if professional account is pending approval (not applicable to admins)
+    if (user.role !== 'user' && user.role !== 'admin' && user.isApproved !== true && user.isApproved !== false) {
       return NextResponse.json(
         { message: 'Your account is pending approval. Please wait for admin verification.' },
         { status: 403 }
