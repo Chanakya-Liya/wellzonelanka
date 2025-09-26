@@ -150,12 +150,12 @@ export default function Home() {
             >
               <button 
                 onClick={handleJoinUsClick}
-                className="rounded-full bg-cyan-500 text-white px-8 py-4 text-lg font-semibold hover:bg-cyan-600 transition-colors"
+                className="rounded-full bg-cyan-500 text-white px-8 py-4 text-lg font-semibold hover:bg-cyan-600 transition-colors" 
               >
                 Get Started
               </button>
 
-              <Link href="/about">
+              <Link href="/video-conferencing">
                 <button className="rounded-full bg-transparent border-2 border-white text-white px-8 py-4 text-lg font-semibold hover:bg-white hover:text-black transition-colors">
                   Learn More
                 </button>

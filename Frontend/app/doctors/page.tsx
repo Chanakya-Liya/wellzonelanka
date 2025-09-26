@@ -67,8 +67,8 @@ export default function Home() {
     <Navbar />
 
       <section className="container mx-auto px-4 py-20">
-        
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center" style={{ marginLeft: '5vw' }}>
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
@@ -90,7 +90,7 @@ export default function Home() {
                   Get Started <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
               </Link>
-              <Link href="/about">
+              {/* <Link href="/about">
                 <Button
                   variant="outline"
                   className="bg-sky-500 hover:bg-sky-600 text-white px-8 py-6 text-lg "
@@ -98,7 +98,7 @@ export default function Home() {
                   <Play className="mr-2 h-5 w-5 bg-sky-500" />
                   How it works
                 </Button>
-              </Link>
+              </Link> */}
             </div>
           </motion.div>
           <motion.div

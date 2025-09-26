@@ -378,14 +378,14 @@ export default function DoctorsPage() {
                           className="px-2 py-1 text-white rounded-full hover:opacity-90 transition-all duration-300 text-xs font-medium flex-1" 
                           style={{ backgroundColor: '#4285F4' }}
                         >
-                          Book appointment
+                          Book Now
                         </button>
                         <button 
                           onClick={(e) => {
                             e.stopPropagation();
                             setSelectedDoctor(doctor);
                           }}
-                          className="px-2 py-1 text-white rounded-full hover:opacity-90 transition-all duration-300 text-xs font-medium flex-1" 
+                          className="px-2 py-1 text-white rounded-full hover:opacity-90 transition-all duration-300 text-sm font-medium flex-1" 
                           style={{ backgroundColor: '#4285F4' }}
                         >
                           View
