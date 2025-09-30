@@ -2,9 +2,10 @@ import { type NextRequest, NextResponse } from "next/server"
 import { connectToDatabase, convertDocToJSON } from "@/app/lib/api/mongodb"
 import { ObjectId } from "mongodb"
 
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const id = params.id
+    const resolvedParams = await params;
+    const id = resolvedParams.id
     const { db } = await connectToDatabase()
 
     // Fetch appointment from MongoDB
@@ -25,9 +26,10 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
   }
 }
 
-export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const id = params.id
+    const resolvedParams = await params;
+    const id = resolvedParams.id
     const data = await request.json()
     const { db } = await connectToDatabase()
 
@@ -59,9 +61,10 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
   }
 }
 
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const id = params.id
+    const resolvedParams = await params;
+    const id = resolvedParams.id
     const { db } = await connectToDatabase()
 
     // Update appointment status to cancelled in MongoDB

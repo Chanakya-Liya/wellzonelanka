@@ -32,12 +32,76 @@ export default function Register() {
     hospitalAffiliation: "",
     medicalLicense: "",
     professionalBio: "",
-    // File uploads (we'll handle as text for now, can be enhanced later)
-    certificationFiles: "",
+    // File uploads - now storing URLs
+    certificationFiles: [] as string[],
     // Agreement fields
     termsAgreed: false,
     authenticityConfirmed: false,
   });
+  
+  // State for file handling
+  const [uploadingFiles, setUploadingFiles] = useState(false);
+  const [uploadedFiles, setUploadedFiles] = useState<{name: string, url: string}[]>([]);
+
+  // Handle file upload
+  const handleFileUpload = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+
+    setUploadingFiles(true);
+    const tempUserId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const uploadedUrls: string[] = [];
+    const uploadedFileInfo: {name: string, url: string}[] = [];
+
+    try {
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('folder', 'certificates');
+        formData.append('userId', tempUserId);
+        formData.append('fileName', file.name);
+
+        const response = await fetch('/api/upload', {
+          method: 'POST',
+          body: formData,
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          uploadedUrls.push(data.downloadURL);
+          uploadedFileInfo.push({
+            name: file.name,
+            url: data.downloadURL
+          });
+        } else {
+          console.error('Upload failed:', data.error);
+          alert(`Upload failed for ${file.name}: ${data.error}`);
+        }
+      }
+
+      setForm(prev => ({
+        ...prev,
+        certificationFiles: [...prev.certificationFiles, ...uploadedUrls]
+      }));
+      setUploadedFiles(prev => [...prev, ...uploadedFileInfo]);
+
+    } catch (error) {
+      console.error('Error uploading files:', error);
+      alert('Error uploading files. Please try again.');
+    } finally {
+      setUploadingFiles(false);
+    }
+  };
+
+  // Remove uploaded file
+  const removeUploadedFile = (index: number) => {
+    setUploadedFiles(prev => prev.filter((_, i) => i !== index));
+    setForm(prev => ({
+      ...prev,
+      certificationFiles: prev.certificationFiles.filter((_, i) => i !== index)
+    }));
+  };
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -73,7 +137,7 @@ export default function Register() {
       hospitalAffiliation: "",
       medicalLicense: "",
       professionalBio: "",
-      certificationFiles: "",
+      certificationFiles: [],
     });
   };
 
@@ -491,20 +555,41 @@ export default function Register() {
                                 <input
                                   type="file"
                                   multiple
-                                  accept=".pdf,.jpg,.jpeg,.png"
+                                  accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
                                   className="w-full px-4 py-2.5 bg-gray-50 border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all"
-                                  disabled={pending}
-                                  onChange={(e) => {
-                                    const files = e.target.files;
-                                    if (files) {
-                                      const fileNames = Array.from(files).map(file => file.name).join(', ');
-                                      setForm({ ...form, certificationFiles: fileNames });
-                                    }
-                                  }}
+                                  disabled={pending || uploadingFiles}
+                                  onChange={(e) => handleFileUpload(e.target.files)}
                                 />
                                 <p className="text-xs text-gray-500 mt-1">
-                                  Upload your certification documents (PDF, JPG, PNG)
+                                  Upload your certification documents (PDF, JPG, PNG, DOC, DOCX - Max 10MB each)
                                 </p>
+                                
+                                {/* Display uploaded files */}
+                                {uploadedFiles.length > 0 && (
+                                  <div className="mt-3 space-y-2">
+                                    <p className="text-sm font-medium text-gray-700">Uploaded Files:</p>
+                                    {uploadedFiles.map((file, index) => (
+                                      <div key={index} className="flex items-center justify-between bg-green-50 border border-green-200 rounded-md p-2">
+                                        <span className="text-sm text-green-800 truncate">{file.name}</span>
+                                        <button
+                                          type="button"
+                                          onClick={() => removeUploadedFile(index)}
+                                          className="text-red-500 hover:text-red-700 text-sm"
+                                          disabled={pending}
+                                        >
+                                          Remove
+                                        </button>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                                
+                                {uploadingFiles && (
+                                  <div className="mt-2 flex items-center gap-2 text-sm text-blue-600">
+                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                                    Uploading files...
+                                  </div>
+                                )}
                               </div>
                             </div>
                           </>
@@ -602,20 +687,41 @@ export default function Register() {
                                 <input
                                   type="file"
                                   multiple
-                                  accept=".pdf,.jpg,.jpeg,.png"
+                                  accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
                                   className="w-full px-4 py-2.5 bg-gray-50 border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all"
-                                  disabled={pending}
-                                  onChange={(e) => {
-                                    const files = e.target.files;
-                                    if (files) {
-                                      const fileNames = Array.from(files).map(file => file.name).join(', ');
-                                      setForm({ ...form, certificationFiles: fileNames });
-                                    }
-                                  }}
+                                  disabled={pending || uploadingFiles}
+                                  onChange={(e) => handleFileUpload(e.target.files)}
                                 />
                                 <p className="text-xs text-gray-500 mt-1">
-                                  Upload your medical certification documents (PDF, JPG, PNG)
+                                  Upload your medical certification documents (PDF, JPG, PNG, DOC, DOCX - Max 10MB each)
                                 </p>
+                                
+                                {/* Display uploaded files */}
+                                {uploadedFiles.length > 0 && (
+                                  <div className="mt-3 space-y-2">
+                                    <p className="text-sm font-medium text-gray-700">Uploaded Files:</p>
+                                    {uploadedFiles.map((file, index) => (
+                                      <div key={index} className="flex items-center justify-between bg-green-50 border border-green-200 rounded-md p-2">
+                                        <span className="text-sm text-green-800 truncate">{file.name}</span>
+                                        <button
+                                          type="button"
+                                          onClick={() => removeUploadedFile(index)}
+                                          className="text-red-500 hover:text-red-700 text-sm"
+                                          disabled={pending}
+                                        >
+                                          Remove
+                                        </button>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                                
+                                {uploadingFiles && (
+                                  <div className="mt-2 flex items-center gap-2 text-sm text-blue-600">
+                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                                    Uploading files...
+                                  </div>
+                                )}
                               </div>
                             </div>
                           </>

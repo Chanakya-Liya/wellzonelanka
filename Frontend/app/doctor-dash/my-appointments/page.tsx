@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Calendar, Clock, Video, X, Stethoscope, History } from "lucide-react";
+import { Check, X, User, MapPin, Clock, Star, Calendar, Stethoscope, History } from "lucide-react";
 import {
   getDoctorAppointments,
   cancelDoctorAppointment,
@@ -193,15 +193,6 @@ export default function MyDoctorAppointmentsPage() {
                       <div className="flex items-center justify-between md:justify-end space-x-2">
                         {getStatusBadge(appointment.status)}
                         <div className="flex space-x-2">
-                          {appointment.status === "confirmed" && (
-                            <Link
-                              href="/doctor/video-consultation"
-                              className="px-3 py-1 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors flex items-center"
-                            >
-                              <Video className="h-4 w-4 mr-1" />
-                              Join
-                            </Link>
-                          )}
                           {appointment.status !== "cancelled" && (
                             <button
                               className="px-3 py-1 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors flex items-center"

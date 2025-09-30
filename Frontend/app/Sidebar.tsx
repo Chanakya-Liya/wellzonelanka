@@ -15,8 +15,8 @@ import {
 const Sidebar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const router = useRouter();
-  const sidebarRef = useRef(null);
-  const triggerRef = useRef(null);
+  const sidebarRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLDivElement>(null);
 
   // Auto-hide sidebar when mouse leaves the sidebar area
   useEffect(() => {
@@ -37,12 +37,13 @@ const Sidebar = () => {
 
   // Close sidebar when clicking outside
   useEffect(() => {
-    const handleClickOutside = (event) => {
+    const handleClickOutside = (event: MouseEvent) => {
       if (
         isOpen &&
         sidebarRef.current &&
-        !sidebarRef.current.contains(event.target) &&
-        !triggerRef.current.contains(event.target)
+        !sidebarRef.current.contains(event.target as Node) &&
+        triggerRef.current &&
+        !triggerRef.current.contains(event.target as Node)
       ) {
         setIsOpen(false);
       }
@@ -219,7 +220,12 @@ const Sidebar = () => {
 };
 
 // Enhanced Navigation Item Component - Adapted for transparent design
-const NavItemEnhanced = ({ icon, text, subtext, onClick }) => {
+const NavItemEnhanced = ({ icon, text, subtext, onClick }: {
+  icon: React.ReactNode;
+  text: string;
+  subtext: string;
+  onClick: () => void;
+}) => {
   return (
     <div className="group relative" onClick={onClick}>
       <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500/20 to-cyan-500/20 rounded-xl blur opacity-0 group-hover:opacity-100 transition duration-200"></div>

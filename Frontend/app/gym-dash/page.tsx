@@ -1,66 +1,130 @@
 "use client";
 
 import type React from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Video, Calendar, ClipboardList, User } from "lucide-react";
+import { Calendar, ClipboardList, User, Clock } from "lucide-react";
 import { Suspense } from "react";
 import { withAuth } from "@/hooks/useAuth";
+
 
 function GymDashContent() {
   const searchParams = useSearchParams();
   const trainerId = searchParams.get('trainerId');
   const trainerName = searchParams.get('trainerName');
+  const [todaysAppointments, setTodaysAppointments] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [currentUser, setCurrentUser] = useState<any>(null);
+
+  useEffect(() => {
+    const user = JSON.parse(localStorage.getItem('currentUser') || '{}');
+    setCurrentUser(user);
+    
+    // Fetch today's appointments for the trainer or user
+    const fetchTodaysAppointments = async () => {
+      try {
+        const today = new Date().toISOString().split('T')[0];
+        const isTrainer = user.role === 'trainer';
+        const endpoint = isTrainer 
+          ? `/api/trainer-appointments/trainer/${user.id}?date=${today}`
+          : `/api/trainer-appointments/user/${user.id}?date=${today}`;
+        
+        const response = await fetch(endpoint);
+        
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success) {
+            setTodaysAppointments(data.appointments || []);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching appointments:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (user.id) {
+      fetchTodaysAppointments();
+    } else {
+      setLoading(false);
+    }
+  }, []);
 
   return (
-    <div className="bg-white min-h-screen flex items-center justify-center py-10">
-      <div className="flex flex-col min-h-screen bg-white text-black">
-        <div className="container mx-auto p-4 max-w-6xl bg-white text-black">
-          <div className="flex items-center mb-8">
-            <Link href="/trainers" className="mr-4">
-              <button className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors">
-                Back to Trainers
-              </button>
-            </Link>
-            <div>
-              <h1 className="text-3xl font-bold">Gym Trainer Services</h1>
-              {trainerName && (
-                <div className="flex items-center mt-2 text-gray-600">
-                  <User className="h-4 w-4 mr-2" />
-                  <span>Selected Trainer: <strong>{decodeURIComponent(trainerName)}</strong></span>
+    <div className="bg-gray-50 min-h-screen py-6">
+      <div className="container mx-auto px-4 max-w-7xl">
+        <div className="flex items-center mb-8">
+          <Link href="/trainers" className="mr-4">
+            <button className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors">
+              Back to Trainers
+            </button>
+          </Link>
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Trainer Dashboard</h1>
+            {trainerName && (
+              <div className="flex items-center mt-2 text-gray-600">
+                <User className="h-4 w-4 mr-2" />
+                <span>Selected Trainer: <strong>{decodeURIComponent(trainerName)}</strong></span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Today's Training Sessions */}
+        {todaysAppointments.length > 0 && (
+          <div className="mb-8">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
+              <Clock className="h-5 w-5 mr-2 text-green-600" />
+              Today's Training Sessions
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {todaysAppointments.map((appointment) => (
+                <div key={appointment.id} className="bg-white rounded-lg border border-gray-200 p-4 shadow-md">
+                  <h4 className="font-semibold text-gray-900 text-sm mb-1">
+                    Session with {appointment.userName || 'Client'}
+                  </h4>
+                  <p className="text-xs text-gray-600">
+                    {new Date(appointment.date).toLocaleDateString()} at {appointment.time}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {appointment.serviceType}
+                  </p>
                 </div>
-              )}
+              ))}
             </div>
           </div>
+        )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <ServiceCard
-              title="Video Conferencing"
-              description="Connect with your trainer virtually"
-              details="Join live video sessions with your fitness trainer for real-time guidance and feedback."
-              icon={<Video className="h-10 w-10 text-sky-500" />}
-              buttonText="Join Session"
-              href={`/gym-dash/video-session${trainerId ? `?trainerId=${trainerId}&trainerName=${encodeURIComponent(trainerName || '')}` : ''}`}
-            />
-
-            <ServiceCard
-              title="Book Appointment"
-              description="Schedule your training sessions"
-              details="Book appointments with your selected trainer based on your schedule and fitness goals."
-              icon={<Calendar className="h-10 w-10 text-sky-500" />}
-              buttonText="Book Now"
-              href={`/gym-dash/book-appointment${trainerId ? `?trainerId=${trainerId}&trainerName=${encodeURIComponent(trainerName || '')}` : ''}`}
-            />
-
-            <ServiceCard
-              title="My Appointments"
-              description="Manage your scheduled sessions"
-              details="View, reschedule, or cancel your upcoming appointments with trainers."
-              icon={<ClipboardList className="h-10 w-10 text-sky-500" />}
-              buttonText="View Appointments"
-              href={`/gym-dash/my-appointments${trainerId ? `?trainerId=${trainerId}&trainerName=${encodeURIComponent(trainerName || '')}` : ''}`}
-            />
+        {loading && (
+          <div className="text-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto mb-2"></div>
+            <p className="text-gray-600">Loading appointments...</p>
           </div>
+        )}
+
+        {/* Services Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
+
+          <ServiceCard
+            title="Book Appointment"
+            description="Schedule your training sessions"
+            details="Book appointments with your selected trainer based on your schedule and fitness goals."
+            icon={<Calendar className="h-10 w-10 text-sky-500" />}
+            buttonText="Book Now"
+            href={`/gym-dash/book-appointment${trainerId ? `?trainerId=${trainerId}&trainerName=${encodeURIComponent(trainerName || '')}` : ''}`}
+          />
+
+          <ServiceCard
+            title="My Appointments"
+            description="Manage your scheduled sessions"
+            details="View, reschedule, or cancel your upcoming appointments with trainers."
+            icon={<ClipboardList className="h-10 w-10 text-sky-500" />}
+            buttonText="View Appointments"
+            href={`/gym-dash/my-appointments${trainerId ? `?trainerId=${trainerId}&trainerName=${encodeURIComponent(trainerName || '')}` : ''}`}
+          />
         </div>
       </div>
     </div>
