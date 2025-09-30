@@ -64,6 +64,7 @@ export default function Trainers() {
   const [selectedFilter, setSelectedFilter] = useState("all");
   const [error, setError] = useState<string | null>(null);
   const [selectedTrainer, setSelectedTrainer] = useState<Trainer | null>(null);
+  const [reviewModalTrainer, setReviewModalTrainer] = useState<Trainer | null>(null);
 
   // Fetch trainers from database
   useEffect(() => {
@@ -80,11 +81,12 @@ export default function Trainers() {
         console.log('API Response:', data);
         
         if (data.success) {
-          // Add mock data for display purposes since API might not have all fields
+          // Enrich trainers with default values for missing fields
           const enrichedTrainers = data.trainers.map((trainer: Trainer) => ({
             ...trainer,
-            rating: trainer.rating || 4.8 + Math.random() * 0.2,
-            reviewCount: trainer.reviewCount || Math.floor(Math.random() * 100) + 20,
+            // Use actual rating/reviewCount from database if available, otherwise use defaults
+            rating: trainer.rating || 0,
+            reviewCount: trainer.reviewCount || 0,
             hourlyRate: trainer.hourlyRate || `Rs. ${(2000 + Math.random() * 3000).toFixed(0)}/hour`,
             location: trainer.location || 'Sri Lanka',
             availableHours: trainer.availableHours || 'Mon-Fri: 6AM-9PM'
@@ -348,10 +350,10 @@ export default function Trainers() {
                     <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-full flex items-center shadow-lg">
                       <Star className="h-3.5 w-3.5 text-yellow-500 fill-yellow-500 mr-1" />
                       <span className="text-gray-900 text-sm font-semibold">
-                        {trainer.rating?.toFixed(1) || '4.9'}
+                        {trainer.rating && trainer.rating > 0 ? trainer.rating.toFixed(1) : 'New'}
                       </span>
                       <span className="text-gray-600 text-xs ml-1">
-                        ({trainer.reviewCount || '25+'})
+                        ({trainer.reviewCount || '0'})
                       </span>
                     </div>
                   </div>
@@ -417,6 +419,15 @@ export default function Trainers() {
         <TrainerModal
           trainer={selectedTrainer}
           onClose={() => setSelectedTrainer(null)}
+          onOpenReviewModal={setReviewModalTrainer}
+        />
+      )}
+      
+      {/* Trainer Review Modal */}
+      {reviewModalTrainer && (
+        <TrainerReviewModal
+          trainer={reviewModalTrainer}
+          onClose={() => setReviewModalTrainer(null)}
         />
       )}
       
@@ -425,13 +436,237 @@ export default function Trainers() {
   );
 }
 
-// Trainer Modal Component
-interface TrainerModalProps {
+// Trainer Review Modal Component
+interface TrainerReviewModalProps {
   trainer: Trainer;
   onClose: () => void;
 }
 
-function TrainerModal({ trainer, onClose }: TrainerModalProps) {
+function TrainerReviewModal({ trainer, onClose }: TrainerReviewModalProps) {
+  const [rating, setRating] = useState(0);
+  const [hoveredRating, setHoveredRating] = useState(0);
+  const [comment, setComment] = useState('');
+  const [clientName, setClientName] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitSuccess, setSubmitSuccess] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!rating || !comment.trim() || !clientName.trim()) {
+      alert('Please fill in all fields and provide a rating');
+      return;
+    }
+
+    if (comment.trim().length < 10) {
+      alert('Please provide a comment with at least 10 characters');
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const response = await fetch('/api/trainer-reviews', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          trainerId: trainer.id,
+          rating,
+          comment: comment.trim(),
+          clientName: clientName.trim(),
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setSubmitSuccess(true);
+        setTimeout(() => {
+          onClose();
+          // Refresh the page to show updated reviews
+          window.location.reload();
+        }, 2000);
+      } else {
+        alert(`Error: ${result.error}`);
+      }
+    } catch (error) {
+      console.error('Error submitting review:', error);
+      alert('Failed to submit review. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleBackdropClick = (e: React.MouseEvent) => {
+    if (e.target === e.currentTarget) {
+      onClose();
+    }
+  };
+
+  if (submitSuccess) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div className="bg-white rounded-2xl p-8 max-w-md w-full text-center shadow-2xl">
+          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <span className="text-green-600 text-2xl">✓</span>
+          </div>
+          <h3 className="text-xl font-bold text-gray-900 mb-2">Review Submitted!</h3>
+          <p className="text-gray-600">Thank you for your feedback. Your review helps other clients make informed decisions.</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div 
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+      onClick={handleBackdropClick}
+    >
+      <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl transform transition-all duration-300 scale-100">
+        <div className="p-6">
+          {/* Header */}
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-xl font-bold text-gray-900">Rate Trainer</h2>
+            <button
+              onClick={onClose}
+              className="text-gray-400 hover:text-gray-600 text-2xl font-light w-8 h-8 flex items-center justify-center hover:bg-gray-100 rounded-full transition-colors"
+            >
+              ×
+            </button>
+          </div>
+
+          {/* Trainer Info */}
+          <div className="flex items-center mb-6 p-4 bg-gray-50 rounded-lg">
+            <div className="w-12 h-12 bg-gradient-to-br from-slate-700 to-slate-600 rounded-full flex items-center justify-center mr-4">
+              <span className="text-white text-lg font-bold">
+                {trainer.firstName.charAt(0)}{trainer.lastName.charAt(0)}
+              </span>
+            </div>
+            <div>
+              <h3 className="font-semibold text-gray-900">{trainer.firstName} {trainer.lastName}</h3>
+              <p className="text-sm text-gray-600">{trainer.specialization}</p>
+              <p className="text-xs text-gray-500">{trainer.experience} years experience</p>
+            </div>
+          </div>
+
+          {/* Review Form */}
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Client Name */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Your Name *
+              </label>
+              <input
+                type="text"
+                value={clientName}
+                onChange={(e) => setClientName(e.target.value)}
+                placeholder="Enter your name"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 text-gray-900"
+                required
+              />
+            </div>
+
+            {/* Rating */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Rating *
+              </label>
+              <div className="flex items-center space-x-1">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    type="button"
+                    onClick={() => setRating(star)}
+                    onMouseEnter={() => setHoveredRating(star)}
+                    onMouseLeave={() => setHoveredRating(0)}
+                    className="focus:outline-none"
+                  >
+                    <Star
+                      className={`h-8 w-8 transition-colors ${
+                        star <= (hoveredRating || rating)
+                          ? 'text-yellow-400 fill-yellow-400'
+                          : 'text-gray-300'
+                      }`}
+                    />
+                  </button>
+                ))}
+                {rating > 0 && (
+                  <span className="ml-3 text-sm text-gray-600">
+                    {rating === 1 && "Poor"}
+                    {rating === 2 && "Fair"}
+                    {rating === 3 && "Good"}
+                    {rating === 4 && "Very Good"}
+                    {rating === 5 && "Excellent"}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Comment */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Your Review *
+              </label>
+              <textarea
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                placeholder="Share your experience with this trainer... (minimum 10 characters)"
+                rows={4}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 resize-none text-gray-900"
+                required
+                minLength={10}
+                maxLength={500}
+              />
+              <div className="text-xs text-gray-500 mt-1">
+                {comment.length}/500 characters (minimum 10)
+              </div>
+            </div>
+
+            {/* Submit Button */}
+            <div className="flex space-x-3 pt-4">
+              <button
+                type="button"
+                onClick={onClose}
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={isSubmitting || !rating || !comment.trim() || !clientName.trim()}
+                className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors ${
+                  isSubmitting || !rating || !comment.trim() || !clientName.trim()
+                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    : 'bg-cyan-600 text-white hover:bg-cyan-700'
+                }`}
+              >
+                {isSubmitting ? (
+                  <div className="flex items-center justify-center">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Submitting...
+                  </div>
+                ) : (
+                  'Submit Review'
+                )}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Trainer Modal Component
+interface TrainerModalProps {
+  trainer: Trainer;
+  onClose: () => void;
+  onOpenReviewModal: (trainer: Trainer) => void;
+}
+
+function TrainerModal({ trainer, onClose, onOpenReviewModal }: TrainerModalProps) {
   const handleBackdropClick = (e: React.MouseEvent) => {
     if (e.target === e.currentTarget) {
       onClose();
@@ -534,7 +769,14 @@ function TrainerModal({ trainer, onClose }: TrainerModalProps) {
                 📅 Book Session
               </button>
               
-              <button className="w-full border border-gray-300 text-gray-700 py-4 px-6 rounded-xl hover:bg-gray-100 transition-colors duration-300 font-semibold text-base shadow-sm">
+              <button 
+                onClick={() => {
+                  // Close trainer modal and open review modal
+                  onClose();
+                  onOpenReviewModal(trainer);
+                }}
+                className="w-full border border-gray-300 text-gray-700 py-4 px-6 rounded-xl hover:bg-gray-100 transition-colors duration-300 font-semibold text-base shadow-sm"
+              >
                 ⭐ Rate Trainer
               </button>
             </div>

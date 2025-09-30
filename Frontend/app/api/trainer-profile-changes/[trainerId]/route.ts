@@ -5,10 +5,11 @@ import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
 // Get pending changes for a specific trainer
 export async function GET(
   request: NextRequest,
-  { params }: { params: { trainerId: string } }
+  { params }: { params: Promise<{ trainerId: string }> }
 ) {
   try {
-    const { trainerId } = await params;
+    const resolvedParams = await params;
+    const { trainerId } = resolvedParams;
     console.log('🔍 Fetching pending changes for trainer:', trainerId);
 
     if (!trainerId) {

@@ -12,7 +12,10 @@ import { db } from '@/lib/firebase';
 export async function GET(request: NextRequest, { params }: { params: Promise<{ userId: string }> }) {
   try {
     const { userId } = await params;
-    console.log('Fetching appointments for user:', userId);
+    const { searchParams } = new URL(request.url);
+    const date = searchParams.get('date');
+    
+    console.log('Fetching appointments for user:', userId, 'on date:', date);
 
     let appointments: any[] = [];
     let retries = 3;
@@ -21,11 +24,24 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       try {
         // Get appointments from the appointments collection
         const appointmentsRef = collection(db, 'appointments');
-        const q = query(
-          appointmentsRef,
-          where('userId', '==', userId),
-          orderBy('createdAt', 'desc')
-        );
+        let q;
+        
+        if (date) {
+          // Filter by specific date
+          q = query(
+            appointmentsRef,
+            where('userId', '==', userId),
+            where('date', '==', date),
+            where('status', '==', 'Confirmed')
+          );
+        } else {
+          // Get all appointments
+          q = query(
+            appointmentsRef,
+            where('userId', '==', userId),
+            orderBy('createdAt', 'desc')
+          );
+        }
 
         const querySnapshot = await getDocs(q);
         

@@ -41,7 +41,7 @@ const ReviewCard = ({ img }: ReviewCardProps) => (
   </figure>
 );
 
-export function MarqueeDemoVertical() {
+function MarqueeDemoVertical() {
   return (
     <div className="relative flex h-[500px] w-full flex-row items-center justify-center overflow-hidden mt-11">
       <Marquee pauseOnHover vertical className="[--duration:22s]">
