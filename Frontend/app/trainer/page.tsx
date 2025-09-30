@@ -12,43 +12,56 @@ export default function Home() {
       <Navbar />
 
       {/* Hero Section */}
-      <section 
-        className="relative h-[400px] sm:h-[600px] md:h-[700px] bg-cover bg-center" 
-        style={{ backgroundImage: "url('https://img.freepik.com/free-photo/care-male-healthy-weights-athletic_1139-695.jpg')" }}
-      >
-        <div className="absolute inset-0 bg-black opacity-50"></div>
-        <div className="relative z-10 max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8 flex items-center h-full">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 items-center">
-            <div className="text-center md:text-left">
-              <h1 className="text-white text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight mb-4">
-                Exercise at Home,{" "}
-                <span className="text-white">Connect Online</span>
-              </h1>
-              <p className="mt-2 text-sm sm:text-base md:text-lg text-white">
-                WellZone Lanka brings professional gym training to your home. Connect with trainers, get personalized exercise recommendations, and track your progress with our advanced AI-powered platform.
-              </p>
-              <div className="mt-8 flex flex-wrap justify-center md:justify-start gap-4">
-                <Button
-                  asChild
-                  variant="outline"
-                  size="lg"
-                  className="bg-gradient-to-r from-blue-500 via-sky-400 to-blue-500 rounded-3xl shadow-2xl transition-transform duration-500 hover:scale-105 text-white"
-                >
-                  <Link href="/exercise">Explore Exercises</Link>
-                </Button>
-                <Button
-                  asChild
-                  variant="outline"
-                  size="lg"
-                  className="bg-gradient-to-r from-blue-500 via-sky-400 to-blue-500 rounded-3xl shadow-2xl transition-transform duration-500 hover:scale-105 text-white"
-                >
-                  <Link href="/trainers">Find a Trainer</Link>
-                </Button>
-              </div>
+      <div className="relative h-screen">
+        <div className="absolute inset-0">
+          <div/>
+          <video
+            src="/assets/trainer.mp4"
+            autoPlay
+            loop
+            muted
+            playsInline
+            className="object-cover w-full h-full absolute"
+          />
+          <div className="absolute inset-0 bg-black/50" />
+        </div>
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full flex items-center">
+          <div className="text-white max-w-2xl">
+            <h1 className="text-7xl font-bold leading-tight mb-6">
+              Exercise at Home,{" "}
+              <span className="text-white">Connect Online</span>
+            </h1>
+            <p className="text-2xl text-gray-100 mb-8">
+              WellZone Lanka brings professional gym training to your home. Connect with trainers, get personalized exercise recommendations, and track your progress with our advanced AI-powered platform.
+            </p>
+            <div className="flex space-x-4">
+              <button className="rounded-full bg-cyan-500 text-white px-8 py-4 text-lg font-semibold hover:bg-cyan-600 transition-colors">
+                <Link href="/exercise">Explore Exercises</Link>
+              </button>
+              <Link href="/trainers">
+                <button className="rounded-full bg-transparent border-2 border-white text-white px-8 py-4 text-lg font-semibold hover:bg-white hover:text-black transition-colors">
+                  Find a Trainer
+                </button>
+              </Link>
             </div>
           </div>
         </div>
-      </section>
+        <div className="absolute bottom-10 left-0 right-0 flex justify-center">
+          <div className="animate-bounce bg-white p-2 w-10 h-10 ring-1 ring-slate-900/5 shadow-lg rounded-full flex items-center justify-center">
+            <svg
+              className="w-6 h-6 text-cyan-500"
+              fill="none"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path d="M19 14l-7 7m0 0l-7-7m7 7V3"></path>
+            </svg>
+          </div>
+        </div>
+      </div>
 
       {/* Features Section */}
       <section className="py-16 md:py-24" id="services">

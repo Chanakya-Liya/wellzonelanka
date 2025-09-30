@@ -17,7 +17,8 @@ import {
   Phone,
   Mail,
   Clock,
-  MoreHorizontal
+  MoreHorizontal,
+  Video
 } from "lucide-react";
 import { 
   getDoctorAppointments, 
@@ -36,6 +37,16 @@ export default function MySessions() {
   const [searchTerm, setSearchTerm] = useState("");
   const [sessions, setSessions] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  // Update current time every minute
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 60000); // Update every minute
+
+    return () => clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     const initializeSessions = async () => {
@@ -127,6 +138,57 @@ export default function MySessions() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Check if session is within 5 minutes before and 1 hour after (65 minutes total)
+  const isSessionStartingSoon = (session: Appointment) => {
+    const sessionDate = new Date(session.date);
+    const currentDate = new Date(currentTime);
+    
+    // Check if dates match (same day)
+    const isSameDay = 
+      sessionDate.getFullYear() === currentDate.getFullYear() &&
+      sessionDate.getMonth() === currentDate.getMonth() &&
+      sessionDate.getDate() === currentDate.getDate();
+    
+    if (!isSameDay) return false;
+    
+    // Parse session time (assuming format like "10:00 AM" or "14:30")
+    const timeStr = session.time.trim();
+    let hours = 0;
+    let minutes = 0;
+    
+    // Handle 12-hour format with AM/PM
+    if (timeStr.includes('AM') || timeStr.includes('PM')) {
+      const isPM = timeStr.includes('PM');
+      const timeParts = timeStr.replace(/AM|PM/gi, '').trim().split(':');
+      hours = parseInt(timeParts[0]);
+      minutes = parseInt(timeParts[1] || '0');
+      
+      // Convert to 24-hour format
+      if (isPM && hours !== 12) hours += 12;
+      if (!isPM && hours === 12) hours = 0;
+    } else {
+      // Handle 24-hour format
+      const timeParts = timeStr.split(':');
+      hours = parseInt(timeParts[0]);
+      minutes = parseInt(timeParts[1] || '0');
+    }
+    
+    // Create session datetime
+    const sessionDateTime = new Date(sessionDate);
+    sessionDateTime.setHours(hours, minutes, 0, 0);
+    
+    // Calculate time difference in minutes
+    const timeDiffMs = sessionDateTime.getTime() - currentTime.getTime();
+    const timeDiffMinutes = timeDiffMs / (1000 * 60);
+    
+    // Check if within 5 minutes before or 60 minutes after (65 minutes total window)
+    return timeDiffMinutes >= -60 && timeDiffMinutes <= 5;
+  };
+
+  const handleJoinMeeting = (sessionId: string) => {
+    window.location.href = `https://meet.jit.si/${sessionId}`;
   };
 
   const tabs = ["Today", "Upcoming", "Past", "All"];
@@ -234,12 +296,13 @@ export default function MySessions() {
               <p>Loading: {loading.toString()}</p>
               <p>Sessions Count: {sessions.length}</p>
               <p>Current Date: {currentDate}</p>
+              <p>Current Time: {currentTime.toLocaleTimeString()}</p>
               {sessions.length > 0 && (
                 <div className="mt-2">
                   <p><strong>Sample Session Dates:</strong></p>
                   {sessions.slice(0, 3).map(session => (
                     <p key={session.id} className="ml-2">
-                      - {session.userfirstname}: {session.date} (Status: {session.status})
+                      - {session.userfirstname}: {session.date} at {session.time} (Status: {session.status})
                     </p>
                   ))}
                 </div>
@@ -260,10 +323,6 @@ export default function MySessions() {
                   className="pl-10 pr-4 py-2 border text-gray-800 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent w-80"
                 />
               </div>
-              {/* <button className="flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
-                <Filter className="w-4 h-4" />
-                <span>Filter</span>
-              </button> */}
             </div>
             <button className="px-4 py-2 bg-cyan-500 text-white rounded-lg hover:bg-cyan-600 transition-colors">
               New Session
@@ -298,7 +357,7 @@ export default function MySessions() {
               sessions.map((session, index) => (
                 <div key={session.id} className="bg-cyan-50 border border-cyan-200 rounded-lg p-6">
                   <div className="flex items-start justify-between">
-                    <div className="flex items-start space-x-4">
+                    <div className="flex items-start space-x-4 flex-1">
                       {/* Patient Avatar */}
                       <div className="w-12 h-12 bg-gray-300 rounded-full flex items-center justify-center">
                         <User className="w-6 h-6 text-gray-600" />
@@ -313,6 +372,11 @@ export default function MySessions() {
                           <span className="px-2 py-1 bg-orange-100 text-orange-800 text-xs rounded-full font-medium">
                             Session #{index + 1}
                           </span>
+                          {isSessionStartingSoon(session) && (
+                            <span className="px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 animate-pulse">
+                              Join Available
+                            </span>
+                          )}
                         </div>
                         
                         <div className="flex items-center space-x-6 text-sm text-gray-600 mb-3">
@@ -351,10 +415,21 @@ export default function MySessions() {
                       </div>
                     </div>
 
-                    {/* More Options */}
-                    <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                      <MoreHorizontal className="w-4 h-4 text-gray-400" />
-                    </button>
+                    {/* Action Buttons */}
+                    <div className="flex items-center space-x-2 ml-4">
+                      {isSessionStartingSoon(session) && (
+                        <button 
+                          onClick={() => handleJoinMeeting(session.id)}
+                          className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium flex items-center space-x-2 whitespace-nowrap"
+                        >
+                          <Video className="w-4 h-4" />
+                          <span>Go to Meet</span>
+                        </button>
+                      )}
+                      <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                        <MoreHorizontal className="w-4 h-4 text-gray-400" />
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))

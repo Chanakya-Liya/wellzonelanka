@@ -290,7 +290,7 @@ WellZone Lanka Support Team`,
               </div>
             </div>
 
-            <div className="mt-8 bg-gradient-to-r from-blue-600 to-teal-600 rounded-xl shadow-xl overflow-hidden p-8 text-white">
+            <div className="mt-8 bg-cyan-600 rounded-xl shadow-xl overflow-hidden p-8 text-white">
               <h3 className="text-2xl font-bold mb-6 text-center text-white">
                 Always Available
               </h3>
@@ -519,19 +519,19 @@ WellZone Lanka Support Team`,
       </div>
 
       {/* CTA Section */}
-      <div className="bg-gradient-to-r from-cyan-600 to-blue-600">
+      <div>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <div className="text-center">
-            <h2 className="text-3xl font-extrabold text-white">
+            <h2 className="text-3xl font-extrabold text-gray-800">
               Ready to Transform Your Health?
             </h2>
-            <p className="mt-4 text-xl text-blue-100 max-w-2xl mx-auto">
+            <p className="mt-4 text-xl text-gray-800 max-w-2xl mx-auto">
               Join WellZone Lanka today and begin your journey to optimal
               wellness with our expert team.
             </p>
             <div className="mt-8 flex justify-center space-x-4">
               <button
-                className="group relative overflow-hidden rounded-full bg-gradient-to-r from-blue-500 to-teal-500 border-2 border-white text-white px-8 py-4 text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-300"
+                className="group relative overflow-hidden rounded-full bg-cyan-600 border-2 border-white text-white px-8 py-4 text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-300"
                 onClick={() => (window.location.href = "/services")}
               >
                 <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-cyan-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>

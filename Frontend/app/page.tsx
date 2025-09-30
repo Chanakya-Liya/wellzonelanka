@@ -364,7 +364,7 @@ export default function Home() {
             >
               <button 
                 onClick={handleJoinUsClick}
-                className="rounded-full bg-cyan-500 text-white px-8 py-4 text-lg font-semibold hover:bg-cyan-600 transition-colors"
+                className="rounded-full bg-cyan-500 text-white px-8 py-4 text-lg font-semibold hover:bg-cyan-600 transition-colors" 
               >
                 Get Started
               </button>
