@@ -155,7 +155,7 @@ export default function Home() {
                 Get Started
               </button>
 
-              <Link href="/video-conferencing">
+              <Link href="/about">
                 <button className="rounded-full bg-transparent border-2 border-white text-white px-8 py-4 text-lg font-semibold hover:bg-white hover:text-black transition-colors">
                   Learn More
                 </button>
