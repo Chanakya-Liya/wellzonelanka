@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { Search, User, Dumbbell, Users, Link2, MoreVertical, Download, ChevronDown, LogOut, Home, TrendingUp, Activity, UserCheck } from 'lucide-react';
+import { Search, User, Dumbbell, Users, Link2, MoreVertical, Download, ChevronDown, LogOut, Home, TrendingUp, Activity, UserCheck, Trash2, FileText, ExternalLink, Star } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import AddExerciseModal from './add-exercises/popup/page';
+import AddExerciseModal from '@/components/AddExerciseModal';
 import { firebaseDataService } from '@/lib/firebase-database';
 import AdminRouteGuard from './AdminRouteGuard';
 import AdminNavigationBlock from './AdminNavigationBlock';
@@ -69,6 +69,51 @@ interface Exercise {
   bodyPart: string;
   muscles: string;
   description: string;
+}
+
+// File Download Component
+function FileDownloadSection({ files, userType }: { files?: string[], userType: string }) {
+  if (!files || files.length === 0) {
+    return (
+      <div className="mt-3 p-2 bg-gray-50 rounded border text-sm text-gray-500">
+        No certification files uploaded
+      </div>
+    );
+  }
+
+  const handleDownload = (fileUrl: string, index: number) => {
+    window.open(fileUrl, '_blank');
+  };
+
+  return (
+    <div className="mt-3">
+      <p className="text-sm font-medium text-gray-700 mb-2">📁 Certification Files:</p>
+      <div className="space-y-1">
+        {files.map((fileUrl, index) => (
+          <div key={index} className="flex items-center gap-2 p-2 bg-blue-50 rounded border">
+            <FileText className="w-4 h-4 text-blue-600" />
+            <span className="text-sm text-blue-800 flex-1">
+              {userType} Certificate {index + 1}
+            </span>
+            <button
+              onClick={() => handleDownload(fileUrl, index)}
+              className="flex items-center gap-1 px-2 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 transition-colors"
+            >
+              <Download className="w-3 h-3" />
+              Download
+            </button>
+            <button
+              onClick={() => window.open(fileUrl, '_blank')}
+              className="flex items-center gap-1 px-2 py-1 bg-gray-600 text-white text-xs rounded hover:bg-gray-700 transition-colors"
+            >
+              <ExternalLink className="w-3 h-3" />
+              View
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 // Home Dashboard Component
@@ -1393,6 +1438,12 @@ This is a ${doctor.type === 'signup' ? 'new doctor signup' : 'profile change'} r
                     </p>
                   </div>
                   
+                  {/* File Download Section */}
+                  <FileDownloadSection 
+                    files={(doctor as any).certificationFiles} 
+                    userType="Doctor" 
+                  />
+                  
                   {!doctor.isApproved && (
                     <div className="flex gap-3 mt-4">
                       <button 
@@ -2006,6 +2057,12 @@ function TrainerAdminPage() {
                     </p>
                   </div>
                   
+                  {/* File Download Section */}
+                  <FileDownloadSection 
+                    files={(trainer as any).certificationFiles} 
+                    userType="Trainer" 
+                  />
+                  
                   {!trainer.isApproved && (
                     <div className="flex gap-3 mt-4">
                       <button 
@@ -2095,41 +2152,665 @@ This is a new trainer signup request that requires admin approval.`);
   );
 }
 
+// Reviews Component
+function ReviewsPage() {
+  const [activeFilter, setActiveFilter] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [reviews, setReviews] = useState<any[]>([]);
+  const [successStories, setSuccessStories] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('reviews'); // 'reviews' or 'stories'
+
+  // Fetch reviews and success stories from Firebase on component mount
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        console.log('🔍 [ADMIN] Fetching reviews and success stories from admin panel...');
+        
+        // Fetch reviews
+        const reviewsResponse = await fetch('/api/site-reviews?admin=true');
+        const reviewsData = await reviewsResponse.json();
+        
+        console.log('📊 [ADMIN] Reviews API response:', reviewsData);
+        if (reviewsData.success && reviewsData.reviews) {
+          console.log('✅ [ADMIN] Reviews found:', reviewsData.reviews.length);
+          setReviews(reviewsData.reviews);
+        } else {
+          console.error('❌ [ADMIN] Failed to fetch reviews:', reviewsData.message);
+          setReviews([]);
+        }
+
+        // Fetch success stories
+        const storiesResponse = await fetch('/api/success-stories?admin=true');
+        const storiesData = await storiesResponse.json();
+        
+        console.log('📊 [ADMIN] Success Stories API response:', storiesData);
+        if (storiesData.success && storiesData.stories) {
+          console.log('✅ [ADMIN] Success stories found:', storiesData.stories.length);
+          setSuccessStories(storiesData.stories);
+        } else {
+          console.error('❌ [ADMIN] Failed to fetch success stories:', storiesData.message);
+          setSuccessStories([]);
+        }
+      } catch (error) {
+        console.error('💥 [ADMIN] Error fetching data:', error);
+        setReviews([]);
+        setSuccessStories([]);
+      } finally {
+        console.log('🏁 [ADMIN] Finished loading, setting loading to false');
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  const filterReviews = (reviews: any[]) => {
+    console.log('🔍 [FILTER] Input reviews:', reviews.length);
+    console.log('🔍 [FILTER] Active filter:', activeFilter);
+    console.log('🔍 [FILTER] Search query:', searchQuery);
+    
+    const filtered = reviews.filter(review => {
+      const matchesSearch = review.userName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          review.review?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          review.userEmail?.toLowerCase().includes(searchQuery.toLowerCase());
+      
+      let filterResult = false;
+      if (activeFilter === 'all') filterResult = matchesSearch;
+      else if (activeFilter === 'pending') filterResult = matchesSearch && !review.isApproved;
+      else if (activeFilter === 'approved') filterResult = matchesSearch && review.isApproved;
+      else filterResult = matchesSearch;
+      
+      return filterResult;
+    });
+    
+    console.log('✅ [FILTER] Filtered results:', filtered.length);
+    return filtered;
+  };
+
+  const filterSuccessStories = (stories: any[]) => {
+    console.log('🔍 [FILTER] Input success stories:', stories.length);
+    console.log('🔍 [FILTER] Active filter:', activeFilter);
+    console.log('🔍 [FILTER] Search query:', searchQuery);
+    
+    const filtered = stories.filter(story => {
+      const matchesSearch = story.userName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          story.achievement?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          story.story?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          story.userEmail?.toLowerCase().includes(searchQuery.toLowerCase());
+      
+      let filterResult = false;
+      if (activeFilter === 'all') filterResult = matchesSearch;
+      else if (activeFilter === 'pending') filterResult = matchesSearch && !story.isApproved;
+      else if (activeFilter === 'approved') filterResult = matchesSearch && story.isApproved;
+      else filterResult = matchesSearch;
+      
+      return filterResult;
+    });
+    
+    console.log('✅ [FILTER] Filtered success stories results:', filtered.length);
+    return filtered;
+  };
+
+  const handleApproveReview = async (reviewId: string) => {
+    try {
+      const confirmed = window.confirm('Are you sure you want to approve this review?');
+      if (!confirmed) return;
+
+      const response = await fetch('/api/site-reviews', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ reviewId, action: 'approve' }),
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        setReviews(reviews.map(review => 
+          review.id === reviewId 
+            ? { ...review, isApproved: true }
+            : review
+        ));
+        alert('Review approved successfully!');
+      } else {
+        alert(data.message || 'Failed to approve review');
+      }
+    } catch (error) {
+      console.error('Error approving review:', error);
+      alert('An error occurred while approving the review.');
+    }
+  };
+
+  const handleRejectReview = async (reviewId: string) => {
+    try {
+      const confirmed = window.confirm('Are you sure you want to reject this review?');
+      if (!confirmed) return;
+
+      const response = await fetch('/api/site-reviews', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ reviewId, action: 'reject' }),
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        setReviews(reviews.map(review => 
+          review.id === reviewId 
+            ? { ...review, isApproved: false }
+            : review
+        ));
+        alert('Review rejected successfully!');
+      } else {
+        alert(data.message || 'Failed to reject review');
+      }
+    } catch (error) {
+      console.error('Error rejecting review:', error);
+      alert('An error occurred while rejecting the review.');
+    }
+  };
+
+  const handleDeleteReview = async (reviewId: string) => {
+    try {
+      const confirmed = window.confirm('Are you sure you want to delete this review? This action cannot be undone.');
+      if (!confirmed) return;
+
+      const response = await fetch(`/api/site-reviews?reviewId=${reviewId}`, {
+        method: 'DELETE',
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        setReviews(reviews.filter(review => review.id !== reviewId));
+        alert('Review deleted successfully!');
+      } else {
+        alert(data.message || 'Failed to delete review');
+      }
+    } catch (error) {
+      console.error('Error deleting review:', error);
+      alert('An error occurred while deleting the review.');
+    }
+  };
+
+  // Success Stories Handlers
+  const handleApproveStory = async (storyId: string) => {
+    try {
+      const confirmed = window.confirm('Are you sure you want to approve this success story?');
+      if (!confirmed) return;
+
+      const response = await fetch('/api/success-stories', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ storyId, action: 'approve' }),
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        setSuccessStories(successStories.map(story => 
+          story.id === storyId 
+            ? { ...story, isApproved: true }
+            : story
+        ));
+        alert('Success story approved successfully!');
+      } else {
+        alert(data.message || 'Failed to approve success story');
+      }
+    } catch (error) {
+      console.error('Error approving success story:', error);
+      alert('An error occurred while approving the success story.');
+    }
+  };
+
+  const handleRejectStory = async (storyId: string) => {
+    try {
+      const confirmed = window.confirm('Are you sure you want to reject this success story?');
+      if (!confirmed) return;
+
+      const response = await fetch('/api/success-stories', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          storyId, 
+          updates: { isApproved: false } 
+        }),
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        setSuccessStories(successStories.map(story => 
+          story.id === storyId 
+            ? { ...story, isApproved: false }
+            : story
+        ));
+        alert('Success story rejected successfully!');
+      } else {
+        alert(data.message || 'Failed to reject success story');
+      }
+    } catch (error) {
+      console.error('Error rejecting success story:', error);
+      alert('An error occurred while rejecting the success story.');
+    }
+  };
+
+  const handleDeleteStory = async (storyId: string) => {
+    try {
+      const confirmed = window.confirm('Are you sure you want to delete this success story? This action cannot be undone.');
+      if (!confirmed) return;
+
+      const response = await fetch(`/api/success-stories?storyId=${storyId}`, {
+        method: 'DELETE',
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        setSuccessStories(successStories.filter(story => story.id !== storyId));
+        alert('Success story deleted successfully!');
+      } else {
+        alert(data.message || 'Failed to delete success story');
+      }
+    } catch (error) {
+      console.error('Error deleting success story:', error);
+      alert('An error occurred while deleting the success story.');
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="p-8">
+        <div className="flex justify-center items-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-600"></div>
+        </div>
+      </div>
+    );
+  }
+
+  const filteredReviews = filterReviews(reviews);
+  const filteredSuccessStories = filterSuccessStories(successStories);
+  const currentData = activeTab === 'reviews' ? reviews : successStories;
+
+  return (
+    <div className="p-8">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-gray-800 mb-2">Reviews & Success Stories Management</h1>
+        <p className="text-gray-600">Manage user reviews and success stories for your website</p>
+        
+        {/* Tabs */}
+        <div className="mt-6 border-b border-gray-200">
+          <nav className="-mb-px flex space-x-8">
+            <button
+              onClick={() => setActiveTab('reviews')}
+              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'reviews'
+                  ? 'border-cyan-500 text-cyan-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              Site Reviews ({reviews.length})
+            </button>
+            <button
+              onClick={() => setActiveTab('stories')}
+              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'stories'
+                  ? 'border-cyan-500 text-cyan-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              Success Stories ({successStories.length})
+            </button>
+          </nav>
+        </div>
+        
+        {/* Search and Filter */}
+        <div className="mt-6 flex flex-col sm:flex-row gap-4">
+          <div className="flex-1">
+            <input
+              type="text"
+              placeholder={`Search ${activeTab === 'reviews' ? 'reviews' : 'success stories'}...`}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-cyan-500"
+            />
+          </div>
+          <div className="flex gap-2">
+            {['all', 'pending', 'approved'].map((filter) => (
+              <button
+                key={filter}
+                onClick={() => setActiveFilter(filter)}
+                className={`px-4 py-2 rounded-md capitalize ${
+                  activeFilter === filter
+                    ? 'bg-cyan-600 text-white'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                {filter} ({currentData.filter(item => filter === 'all' ? true : filter === 'pending' ? !item.isApproved : item.isApproved).length})
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {loading ? (
+          <div className="col-span-2 text-center py-16">
+            <div className="text-gray-500">Loading {activeTab === 'reviews' ? 'reviews' : 'success stories'}...</div>
+          </div>
+        ) : activeTab === 'reviews' ? (
+          // Reviews Tab Content
+          filteredReviews.length > 0 ? (
+            filteredReviews.map((review) => (
+              <div key={review.id} className="bg-white rounded-lg shadow-sm border p-6">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex items-center">
+                    <div className="h-12 w-12 rounded-full bg-gray-200 flex items-center justify-center text-gray-500 mr-3">
+                      {review.profileImage ? (
+                        <img
+                          src={review.profileImage}
+                          alt={review.userName}
+                          className="h-full w-full object-cover rounded-full"
+                        />
+                      ) : (
+                        <span className="text-lg font-semibold">
+                          {review.userName?.charAt(0)?.toUpperCase()}
+                        </span>
+                      )}
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-gray-900">{review.userName}</h3>
+                      <p className="text-sm text-gray-500">{review.userEmail}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-1">
+                    {[...Array(5)].map((_, i) => (
+                      <Star
+                        key={i}
+                        className={`h-4 w-4 ${
+                          i < review.rating ? 'text-yellow-400 fill-current' : 'text-gray-300'
+                        }`}
+                      />
+                    ))}
+                  </div>
+                </div>
+                
+                <p className="text-gray-700 mb-4 italic">
+                  "{review.review}"
+                </p>
+                
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      review.isApproved 
+                        ? 'bg-green-100 text-green-800' 
+                        : 'bg-yellow-100 text-yellow-800'
+                    }`}>
+                      {review.isApproved ? 'Approved' : 'Pending'}
+                    </span>
+                    <span className="text-xs text-gray-500">
+                      {review.createdAt ? new Date(review.createdAt.seconds * 1000).toLocaleDateString() : 'Recently'}
+                    </span>
+                  </div>
+                  
+                  <div className="flex space-x-2">
+                    {!review.isApproved && (
+                      <button
+                        onClick={() => handleApproveReview(review.id)}
+                        className="px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700 transition-colors"
+                      >
+                        Approve
+                      </button>
+                    )}
+                    {review.isApproved && (
+                      <button
+                        onClick={() => handleRejectReview(review.id)}
+                        className="px-3 py-1 bg-yellow-600 text-white text-sm rounded hover:bg-yellow-700 transition-colors"
+                      >
+                        Reject
+                      </button>
+                    )}
+                    <button
+                      onClick={() => handleDeleteReview(review.id)}
+                      className="px-3 py-1 bg-red-600 text-white text-sm rounded hover:bg-red-700 transition-colors"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="col-span-2 text-center py-16">
+              <div className="text-gray-500">
+                <Star className="h-16 w-16 mx-auto mb-4 text-gray-300" />
+                <h3 className="text-lg font-medium mb-2">No reviews found</h3>
+                <p>No reviews match your current filter.</p>
+              </div>
+            </div>
+          )
+        ) : (
+          // Success Stories Tab Content
+          filteredSuccessStories.length > 0 ? (
+            filteredSuccessStories.map((story) => (
+              <div key={story.id} className="bg-white rounded-lg shadow-sm border p-6">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex items-center">
+                    <div className="h-12 w-12 rounded-full bg-gray-200 flex items-center justify-center text-gray-500 mr-3">
+                      {story.profileImage ? (
+                        <img
+                          src={story.profileImage}
+                          alt={story.userName}
+                          className="h-full w-full object-cover rounded-full"
+                        />
+                      ) : (
+                        <span className="text-lg font-semibold">
+                          {story.userName?.charAt(0)?.toUpperCase()}
+                        </span>
+                      )}
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-gray-900">{story.userName}</h3>
+                      <p className="text-sm text-gray-500">{story.userEmail}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-1">
+                    {[...Array(5)].map((_, i) => (
+                      <Star
+                        key={i}
+                        className={`h-4 w-4 ${
+                          i < story.rating ? 'text-yellow-400 fill-current' : 'text-gray-300'
+                        }`}
+                      />
+                    ))}
+                  </div>
+                </div>
+                
+                <div className="mb-4">
+                  <h4 className="font-semibold text-gray-800 mb-2">Achievement:</h4>
+                  <p className="text-blue-600 font-medium">{story.achievement}</p>
+                </div>
+                
+                <div className="mb-4">
+                  <h4 className="font-semibold text-gray-800 mb-2">Story:</h4>
+                  <p className="text-gray-700 italic">"{story.story}"</p>
+                </div>
+                
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      story.isApproved 
+                        ? 'bg-green-100 text-green-800' 
+                        : 'bg-yellow-100 text-yellow-800'
+                    }`}>
+                      {story.isApproved ? 'Approved' : 'Pending'}
+                    </span>
+                    <span className="text-xs text-gray-500">
+                      {story.createdAt ? new Date(story.createdAt.seconds * 1000).toLocaleDateString() : 'Recently'}
+                    </span>
+                  </div>
+                  
+                  <div className="flex space-x-2">
+                    {!story.isApproved && (
+                      <button
+                        onClick={() => handleApproveStory(story.id)}
+                        className="px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700 transition-colors"
+                      >
+                        Approve
+                      </button>
+                    )}
+                    {story.isApproved && (
+                      <button
+                        onClick={() => handleRejectStory(story.id)}
+                        className="px-3 py-1 bg-yellow-600 text-white text-sm rounded hover:bg-yellow-700 transition-colors"
+                      >
+                        Reject
+                      </button>
+                    )}
+                    <button
+                      onClick={() => handleDeleteStory(story.id)}
+                      className="px-3 py-1 bg-red-600 text-white text-sm rounded hover:bg-red-700 transition-colors"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="col-span-2 text-center py-16">
+              <div className="text-gray-500">
+                <Star className="h-16 w-16 mx-auto mb-4 text-gray-300" />
+                <h3 className="text-lg font-medium mb-2">No success stories found</h3>
+                <p>No success stories match your current filter.</p>
+              </div>
+            </div>
+          )
+        )}
+      </div>
+    </div>
+  );
+}
+
 // Add Exercises Component
 function AddExercisesPage() {
   const [searchQuery, setSearchQuery] = useState('');
-  const [exercises, setExercises] = useState<Exercise[]>([
-    {
-      id: '1',
-      name: 'Squats',
-      bodyPart: 'Lower Body',
-      muscles: 'Quadriceps, Hamstrings, Glutes',
-      description: 'A classic bodyweight exercise that targets the chest, shoulders, and triceps.'
-    },
-    {
-      id: '2',
-      name: 'Push-ups',
-      bodyPart: 'Upper Body',
-      muscles: 'Chest, Shoulders, Triceps',
-      description: 'A fundamental upper body exercise that builds strength and stability.'
-    }
-  ]);
+  const [exercises, setExercises] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
+  // Fetch exercises from Firebase on component mount
+  useEffect(() => {
+    const fetchExercises = async () => {
+      try {
+        const response = await fetch('/api/admin/exercises');
+        const data = await response.json();
+        
+        if (data.success) {
+          setExercises(data.exercises);
+        } else {
+          console.error('Failed to fetch exercises:', data.error);
+        }
+      } catch (error) {
+        console.error('Error fetching exercises:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchExercises();
+  }, []);
+
   const filteredExercises = exercises.filter(exercise =>
-    exercise.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    exercise.bodyPart.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    exercise.muscles.toLowerCase().includes(searchQuery.toLowerCase())
+    exercise.exerciseName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    exercise.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    exercise.difficulty?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (exercise.target && exercise.target.some((t: string) => t.toLowerCase().includes(searchQuery.toLowerCase())))
   );
 
-  const handleAddExercise = (exerciseData: Omit<Exercise, 'id'>) => {
-    const newExercise: Exercise = {
-      id: (exercises.length + 1).toString(),
-      ...exerciseData
-    };
-    setExercises([...exercises, newExercise]);
-    setIsModalOpen(false);
+  const handleAddExercise = async (exerciseData: {
+    exerciseName: string;
+    description: string;
+    difficulty: string;
+    duration: string;
+    target: string[];
+    image?: string;
+    url?: string;
+  }) => {
+    try {
+      const response = await fetch('/api/admin/exercises', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(exerciseData),
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        // Refresh exercises list
+        const refreshResponse = await fetch('/api/admin/exercises');
+        const refreshData = await refreshResponse.json();
+        
+        if (refreshData.success) {
+          setExercises(refreshData.exercises);
+        }
+        
+        setIsModalOpen(false);
+        alert('Exercise added successfully!');
+      } else {
+        alert('Failed to add exercise: ' + data.error);
+      }
+    } catch (error) {
+      console.error('Error adding exercise:', error);
+      alert('An error occurred while adding the exercise.');
+    }
   };
+
+  const handleDeleteExercise = async (exerciseId: string) => {
+    const confirmed = window.confirm('Are you sure you want to delete this exercise?');
+    if (!confirmed) return;
+
+    try {
+      const response = await fetch(`/api/admin/exercises?exerciseId=${exerciseId}`, {
+        method: 'DELETE',
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        // Remove exercise from local state
+        setExercises(exercises.filter(exercise => exercise.id !== exerciseId));
+        alert('Exercise deleted successfully!');
+      } else {
+        alert('Failed to delete exercise: ' + data.error);
+      }
+    } catch (error) {
+      console.error('Error deleting exercise:', error);
+      alert('An error occurred while deleting the exercise.');
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="p-8">
+        <div className="flex items-center justify-center py-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          <span className="ml-3 text-gray-600">Loading exercises...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-8">
@@ -2176,27 +2857,94 @@ function AddExercisesPage() {
           filteredExercises.map((exercise) => (
             <div key={exercise.id} className="bg-white rounded-lg shadow-sm p-6 flex items-start justify-between hover:shadow-md transition-shadow">
               <div className="flex items-start gap-4">
-                <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center">
-                  <Dumbbell className="w-6 h-6 text-gray-600" />
+                {exercise.image ? (
+                  <img 
+                    src={exercise.image} 
+                    alt={exercise.exerciseName}
+                    className="w-16 h-16 object-cover rounded-lg"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = 'none';
+                      (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
+                    }}
+                  />
+                ) : null}
+                <div className={`w-16 h-16 bg-gray-200 rounded-lg flex items-center justify-center ${exercise.image ? 'hidden' : ''}`}>
+                  <Dumbbell className="w-8 h-8 text-gray-600" />
                 </div>
-                <div>
-                  <div className="flex items-center gap-3">
-                    <h3 className="font-semibold text-lg text-gray-800">{exercise.name}</h3>
-                    <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">
-                      {exercise.bodyPart}
+                <div className="flex-1">
+                  <div className="flex items-center gap-3 mb-2">
+                    <h3 className="font-semibold text-lg text-gray-800">{exercise.exerciseName}</h3>
+                    <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                      exercise.difficulty === 'Beginner' ? 'bg-green-100 text-green-800' :
+                      exercise.difficulty === 'Intermediate' ? 'bg-yellow-100 text-yellow-800' :
+                      'bg-red-100 text-red-800'
+                    }`}>
+                      {exercise.difficulty}
                     </span>
                   </div>
-                  <p className="text-gray-600 text-sm mt-1">
-                    <span className="font-medium">Muscles:</span> {exercise.muscles}
-                  </p>
-                  <p className="text-gray-500 mt-2">{exercise.description}</p>
+                  
+                  <div className="space-y-1 mb-3">
+                    <p className="text-gray-600 text-sm">
+                      <span className="font-medium">Duration:</span> {exercise.duration}
+                    </p>
+                    <p className="text-gray-600 text-sm">
+                      <span className="font-medium">Exercise ID:</span> {exercise.id}
+                    </p>
+                    {exercise.target && exercise.target.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {exercise.target.map((target: string, index: number) => (
+                          <span key={index} className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs">
+                            {target}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  
+                  <p className="text-gray-500 text-sm line-clamp-2">{exercise.description}</p>
+                  
+                  {exercise.url && (
+                    <div className="flex gap-2 mt-3">
+                      <a 
+                        href={exercise.url} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                      >
+                        🎥 Watch Video
+                      </a>
+                    </div>
+                  )}
                 </div>
               </div>
-              <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                <svg className="w-5 h-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                </svg>
-              </button>
+              
+              <div className="flex items-center gap-2">
+                <button 
+                  onClick={() => {
+                    const exerciseDetails = `Exercise Details:
+Name: ${exercise.exerciseName}
+ID: ${exercise.id}
+Difficulty: ${exercise.difficulty}
+Duration: ${exercise.duration}
+Target: ${exercise.target ? exercise.target.join(', ') : 'Not specified'}
+Description: ${exercise.description}
+Created: ${exercise.createdAt ? new Date(exercise.createdAt).toLocaleDateString() : 'Not available'}
+Updated: ${exercise.updatedAt ? new Date(exercise.updatedAt).toLocaleDateString() : 'Not available'}`;
+                    alert(exerciseDetails);
+                  }}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                  title="View Details"
+                >
+                  <Search className="w-5 h-5 text-gray-500" />
+                </button>
+                <button 
+                  onClick={() => handleDeleteExercise(exercise.id)}
+                  className="p-2 hover:bg-red-50 rounded-lg transition-colors"
+                  title="Delete Exercise"
+                >
+                  <Trash2 className="w-5 h-5 text-red-500" />
+                </button>
+              </div>
             </div>
           ))
         )}
@@ -2239,6 +2987,8 @@ export default function AdminLayout({
         return <TrainerAdminPage />;
       case 'add-exercises':
         return <AddExercisesPage />;
+      case 'reviews':
+        return <ReviewsPage />;
       default:
         return <HomeDashboard setActiveSection={setActiveSection} />;
     }
@@ -2316,6 +3066,17 @@ export default function AdminLayout({
               >
                 <Link2 className="w-5 h-5" />
                 Exercises
+              </button>
+              <button 
+                onClick={() => setActiveSection('reviews')}
+                className={`w-full flex text-gray-800 items-center gap-3 px-4 py-2 text-left rounded-lg transition-colors ${
+                  activeSection === 'reviews'
+                    ? 'bg-blue-50 text-blue-600'
+                    : 'hover:bg-blue-50 hover:text-blue-600'
+                }`}
+              >
+                <Star className="w-5 h-5" />
+                Reviews
               </button>
             </nav>
 

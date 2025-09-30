@@ -27,6 +27,10 @@ interface User {
   createdAt: string;
   isApproved: boolean;
   status?: 'active' | 'suspended' | 'pending'; // Track user status
+  // File upload fields
+  certificationFiles?: string[]; // Array of file URLs
+  documentFiles?: string[]; // Additional documents
+  profileImage?: string; // Profile image URL
 }
 
 interface Appointment {
@@ -423,6 +427,142 @@ class FirebaseDataService {
     } catch (error) {
       console.error('Error updating user profile:', error);
       throw error;
+    }
+  }
+
+  // Exercise management functions
+  async getAllExercises(): Promise<any[]> {
+    try {
+      let retries = 3;
+      
+      while (retries > 0) {
+        try {
+          const exercisesRef = collection(db, 'exercises');
+          const exercisesSnapshot = await getDocs(exercisesRef);
+          const exercises: any[] = [];
+          
+          exercisesSnapshot.forEach((doc) => {
+            exercises.push({
+              id: doc.id,
+              ...doc.data()
+            });
+          });
+
+          // Sort exercises by document ID (001, 002, etc.)
+          exercises.sort((a, b) => a.id.localeCompare(b.id));
+          
+          return exercises;
+        } catch (error: any) {
+          retries--;
+          if (error.code === 'unavailable' && retries > 0) {
+            console.log(`Firestore unavailable, retrying getAllExercises... (${retries} attempts left)`);
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            continue;
+          }
+          throw error;
+        }
+      }
+      
+      return [];
+    } catch (error) {
+      console.error('Error fetching exercises:', error);
+      throw error;
+    }
+  }
+
+  async addExercise(exerciseData: {
+    exerciseName: string;
+    description: string;
+    difficulty: string;
+    duration: string;
+    target: string[];
+    image?: string;
+    trackUrl?: string;
+    url?: string;
+  }): Promise<string> {
+    try {
+      // Get the next document ID by finding the highest numbered document
+      const exercisesRef = collection(db, 'exercises');
+      const exercisesSnapshot = await getDocs(exercisesRef);
+      
+      let maxNumber = 0;
+      exercisesSnapshot.forEach(doc => {
+        const docId = doc.id;
+        const number = parseInt(docId);
+        if (!isNaN(number) && number > maxNumber) {
+          maxNumber = number;
+        }
+      });
+
+      // Generate next document ID (001, 002, etc.)
+      const nextNumber = maxNumber + 1;
+      const nextDocId = nextNumber.toString().padStart(3, '0');
+
+      // Add the exercise with the generated ID and match the schema structure
+      const exerciseRef = doc(db, 'exercises', nextDocId);
+      await setDoc(exerciseRef, {
+        exerciseId: nextDocId,
+        exerciseName: exerciseData.exerciseName,
+        description: exerciseData.description,
+        difficulty: exerciseData.difficulty,
+        duration: exerciseData.duration,
+        target: exerciseData.target || [],
+        image: exerciseData.image || '',
+        trackUrl: exerciseData.trackUrl || '',
+        url: exerciseData.url || '',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      });
+
+      console.log('Exercise added to Firebase with ID:', nextDocId);
+      return nextDocId;
+    } catch (error) {
+      console.error('Error adding exercise:', error);
+      throw error;
+    }
+  }
+
+  async updateExercise(exerciseId: string, exerciseData: any): Promise<void> {
+    try {
+      const exerciseRef = doc(db, 'exercises', exerciseId);
+      await updateDoc(exerciseRef, {
+        ...exerciseData,
+        updatedAt: new Date().toISOString()
+      });
+      console.log('Exercise updated in Firebase:', exerciseId);
+    } catch (error) {
+      console.error('Error updating exercise:', error);
+      throw error;
+    }
+  }
+
+  async deleteExercise(exerciseId: string): Promise<void> {
+    try {
+      const exerciseRef = doc(db, 'exercises', exerciseId);
+      await deleteDoc(exerciseRef);
+      console.log('Exercise deleted from Firebase:', exerciseId);
+    } catch (error) {
+      console.error('Error deleting exercise:', error);
+      throw error;
+    }
+  }
+
+  async getExerciseById(exerciseId: string): Promise<any | null> {
+    try {
+      const exerciseRef = doc(db, 'exercises', exerciseId);
+      const exerciseSnap = await getDoc(exerciseRef);
+
+      if (!exerciseSnap.exists()) {
+        return null;
+      }
+
+      return {
+        id: exerciseSnap.id,
+        ...exerciseSnap.data()
+      };
+    } catch (error) {
+      console.error('Error getting exercise by ID:', error);
+      return null;
     }
   }
 }

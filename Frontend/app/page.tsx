@@ -15,31 +15,64 @@ import {
   Dumbbell,
   Calendar,
   X,
+  Video,
+  Plus,
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import Navbar from "@/components/Navbar";
 import { Footer } from "./Footer";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import {
   IoIosFlash,
   IoIosFitness,
   IoIosChatbubbles,
   IoIosHeart,
 } from "react-icons/io";
+import AddSuccessStoryModal from "@/components/AddSuccessStoryModal";
+import AddReviewModal from "@/components/AddReviewModal";
 
+
+
+interface SuccessStory {
+  id: string;
+  userId: string;
+  userName: string;
+  userEmail: string;
+  profileImage: string;
+  achievement: string;
+  story: string;
+  rating: number;
+  isApproved: boolean;
+  createdAt: any;
+  updatedAt: any;
+}
 
 export default function Home() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [showPopup, setShowPopup] = useState(false);
+  const [showStoryModal, setShowStoryModal] = useState(false);
   const [currentUser, setCurrentUser] = useState<{
     firstName?: string;
     lastName?: string;
     email?: string;
     role?: string;
+    id?: string;
   } | null>(null);
+  const [userAppointments, setUserAppointments] = useState<any[]>([]);
+  const [appointmentsLoading, setAppointmentsLoading] = useState(false);
+  const [successStories, setSuccessStories] = useState<SuccessStory[]>([]);
+  const [storiesLoading, setStoriesLoading] = useState(true);
+  const [isSubmittingStory, setIsSubmittingStory] = useState(false);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  
+  // Review related state
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+  const [reviews, setReviews] = useState<any[]>([]);
+  const [reviewsLoading, setReviewsLoading] = useState(true);
 
-  // Check if user is logged in
+  // Check if user is logged in and fetch success stories
   useEffect(() => {
     const user = localStorage.getItem('currentUser');
     if (user) {
@@ -47,13 +80,194 @@ export default function Home() {
         const userData = JSON.parse(user);
         setCurrentUser(userData);
         setIsLoggedIn(true);
+        
+        // Fetch user's today appointments
+        fetchTodaysAppointments(userData);
       } catch (error) {
         console.error('Error parsing user data:', error);
         localStorage.removeItem('currentUser');
         setIsLoggedIn(false);
       }
     }
+
+    // Fetch success stories and reviews
+    fetchSuccessStories();
+    fetchReviews();
   }, []);
+
+  const fetchTodaysAppointments = async (user: any) => {
+    if (!user.id || user.role !== 'user') return;
+    
+    setAppointmentsLoading(true);
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      
+      // Fetch both doctor and trainer appointments
+      const [doctorResponse, trainerResponse] = await Promise.all([
+        fetch(`/api/appointments/user/${user.id}?date=${today}`),
+        fetch(`/api/trainer-appointments/user/${user.id}?date=${today}`)
+      ]);
+      
+      const appointments: any[] = [];
+      
+      if (doctorResponse.ok) {
+        const doctorData = await doctorResponse.json();
+        if (doctorData.success && doctorData.appointments) {
+          appointments.push(...doctorData.appointments);
+        }
+      }
+      
+      if (trainerResponse.ok) {
+        const trainerData = await trainerResponse.json();
+        if (trainerData.success && trainerData.appointments) {
+          appointments.push(...trainerData.appointments);
+        }
+      }
+      
+      setUserAppointments(appointments);
+    } catch (error) {
+      console.error('Error fetching appointments:', error);
+    } finally {
+      setAppointmentsLoading(false);
+    }
+  };
+
+  const fetchSuccessStories = async () => {
+    setStoriesLoading(true);
+    try {
+      console.log('🚀 [HOMEPAGE] Fetching success stories from API...');
+      const response = await fetch('/api/success-stories?approved=true', {
+        cache: 'no-cache', // Prevent caching
+        headers: {
+          'Cache-Control': 'no-cache'
+        }
+      });
+      const data = await response.json();
+      
+      console.log('📊 [HOMEPAGE] API Response:', data);
+      if (data.success) {
+        console.log('✅ [HOMEPAGE] Success stories received:', data.stories?.length || 0);
+        console.log('📝 [HOMEPAGE] First story sample:', data.stories?.[0]);
+        // Get all available stories for the scrolling carousel
+        setSuccessStories(data.stories || []);
+      } else {
+        console.error('❌ [HOMEPAGE] Failed to fetch success stories:', data.message);
+        setSuccessStories([]);
+      }
+    } catch (error) {
+      console.error('💥 [HOMEPAGE] Error fetching success stories:', error);
+      setSuccessStories([]);
+    } finally {
+      setStoriesLoading(false);
+    }
+  };
+
+  const fetchReviews = async () => {
+    setReviewsLoading(true);
+    try {
+      console.log('🚀 [HOMEPAGE] Fetching reviews from API...');
+      const response = await fetch('/api/site-reviews?approved=true', {
+        cache: 'no-cache', // Prevent caching
+        headers: {
+          'Cache-Control': 'no-cache'
+        }
+      });
+      const data = await response.json();
+      
+      console.log('📊 [HOMEPAGE] Reviews API Response:', data);
+      if (data.success) {
+        console.log('✅ [HOMEPAGE] Reviews received:', data.reviews?.length || 0);
+        console.log('📝 [HOMEPAGE] First review sample:', data.reviews?.[0]);
+        setReviews(data.reviews || []);
+      } else {
+        console.error('❌ [HOMEPAGE] Failed to fetch reviews:', data.message);
+      }
+    } catch (error) {
+      console.error('Error fetching reviews:', error);
+    } finally {
+      setReviewsLoading(false);
+    }
+  };
+
+  const handleAddStory = async (storyData: {
+    achievement: string;
+    story: string;
+    rating: number;
+    profileImage?: string;
+  }) => {
+    if (!currentUser) return;
+
+    setIsSubmittingStory(true);
+    try {
+      const response = await fetch('/api/success-stories', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: currentUser.id,
+          userName: `${currentUser.firstName} ${currentUser.lastName}`,
+          userEmail: currentUser.email,
+          ...storyData
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setShowStoryModal(false);
+        alert(data.message || 'Success story submitted successfully! It will appear on the website after admin approval.');
+        // Don't refresh success stories since it won't show until approved
+      } else {
+        alert(data.message || 'Failed to submit success story');
+      }
+    } catch (error) {
+      console.error('Error submitting success story:', error);
+      alert('Failed to submit success story. Please try again.');
+    } finally {
+      setIsSubmittingStory(false);
+    }
+  };
+
+  const handleAddReview = async (reviewData: {
+    rating: number;
+    review: string;
+    profileImage?: string;
+  }) => {
+    if (!currentUser) return;
+
+    setIsSubmittingReview(true);
+    try {
+      const response = await fetch('/api/site-reviews', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: currentUser.id,
+          userName: `${currentUser.firstName} ${currentUser.lastName}`,
+          userEmail: currentUser.email,
+          review: reviewData.review, // Correct field name for API
+          rating: reviewData.rating,
+          profileImage: reviewData.profileImage
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setShowReviewModal(false);
+        alert('Review submitted successfully! It will appear on the website after admin approval.');
+      } else {
+        alert(data.message || 'Failed to submit review');
+      }
+    } catch (error) {
+      console.error('Error submitting review:', error);
+      alert('Failed to submit review. Please try again.');
+    } finally {
+      setIsSubmittingReview(false);
+    }
+  };
 
   // Function to handle Join Us button click
   const handleJoinUsClick = () => {
@@ -180,6 +394,63 @@ export default function Home() {
         </div>
       </div>
 
+      {/* User Dashboard Section - Show appointments when logged in */}
+      {isLoggedIn && currentUser?.role === 'user' && userAppointments.length > 0 && (
+        <div className="py-16 bg-gradient-to-br from-blue-50 to-cyan-50 border-b">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center mb-12">
+              <div className="flex items-center justify-center mb-4">
+                <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center">
+                  <Video className="h-6 w-6 text-white" />
+                </div>
+              </div>
+              <h2 className="text-3xl font-bold text-gray-900 mb-2">
+                Welcome back, {currentUser.firstName}!
+              </h2>
+              <p className="text-lg text-gray-600">
+                Your upcoming appointments are ready. Join when it's time!
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
+              {userAppointments.map((appointment) => (
+                <div key={appointment.id} className="bg-white rounded-lg border border-gray-200 p-4 shadow-lg hover:shadow-xl transition-shadow duration-300">
+                  <h4 className="font-semibold text-gray-900 text-sm mb-1">
+                    {appointment.doctorName ? `Consultation with Dr. ${appointment.doctorName}` : `Training Session with ${appointment.trainerName}`}
+                  </h4>
+                  <p className="text-xs text-gray-600">
+                    {new Date(appointment.date).toLocaleDateString()} at {appointment.time}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {appointment.serviceType}
+                  </p>
+                </div>
+              ))}
+            </div>
+
+            {appointmentsLoading && (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+                <p className="text-gray-600">Loading your appointments...</p>
+              </div>
+            )}
+
+            <div className="text-center mt-8">
+              <div className="space-x-4">
+                <Link href="/doctors" className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 transition-colors">
+                  Book Doctor Appointment
+                  <Calendar className="ml-2 h-4 w-4" />
+                </Link>
+                <Link href="/trainers" className="inline-flex items-center px-6 py-3 border border-gray-300 text-base font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 transition-colors">
+                  Book Trainer Session
+                  <Dumbbell className="ml-2 h-4 w-4" />
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Features Section with Staggered Pop Animation */}
       <div className="py-24 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -305,109 +576,245 @@ export default function Home() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 gap-10 md:grid-cols-3">
-            {/* Testimonial 1 */}
-            <div className="bg-white p-8 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 animate-slide-in-left opacity-0">
-              <div className="flex items-center mb-6">
-                <div className="h-16 w-16 rounded-full overflow-hidden mr-4">
-                  <Image
-                    src="/assets/AI 1.png"
-                    alt="Client"
-                    width={64}
-                    height={64}
-                    className="h-full w-full object-cover"
-                  />
-                </div>
-                <div>
-                  <h3 className="text-xl font-bold text-gray-900">
-                    Bihandu Methsilu
-                  </h3>
-                  <p className="text-gray-600">Lost 25kg in 6 months</p>
-                </div>
-              </div>
-              <div className="flex mb-4">
-                {[...Array(5)].map((_, i) => (
-                  <Star
-                    key={i}
-                    className="h-5 w-5 text-yellow-400 fill-current"
-                  />
-                ))}
-              </div>
-              <p className="text-gray-700 italic">
-                &quot;WellZone Lanka changed how I do fitness. The AI gave great
-                advice, and my coach kept me motivated.&quot;
-              </p>
+          {/* Loading State */}
+          {storiesLoading ? (
+            <div className="flex justify-center items-center py-16">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-600"></div>
+              <span className="ml-3 text-gray-600">Loading success stories...</span>
             </div>
+          ) : (
+            <>
+              {successStories.length > 0 ? (
+                /* Horizontally Scrolling Success Stories */
+                <div className="relative overflow-hidden scroll-container" ref={scrollContainerRef}>
+                  <div 
+                    className="flex space-x-6 animate-horizontal-scroll"
+                    style={{
+                      width: 'fit-content',
+                      animation: 'scroll 30s linear infinite'
+                    }}
+                  >
+                    {(() => {
+                      // Only use real stories from database - no mock data
+                      const realStories = successStories;
+                      
+                      // If we have fewer than 3 stories, duplicate them for scrolling effect
+                      let displayStories = [...realStories];
+                      if (realStories.length < 3) {
+                        // Duplicate stories to have at least 6 items for smooth scrolling
+                        while (displayStories.length < 6) {
+                          displayStories = [...displayStories, ...realStories];
+                        }
+                      }
+                      
+                      // Create copies for infinite scroll
+                      const scrollStories = [...displayStories, ...displayStories, ...displayStories];
+                      
+                      return scrollStories.map((story, index) => (
+                      <div 
+                        key={`${story.id}-${index}`} 
+                        className="flex-none w-80 h-80 bg-white p-6 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 flex flex-col"
+                      >
+                        <div className="flex items-center mb-4">
+                          <div className="h-12 w-12 rounded-full bg-gray-200 flex items-center justify-center text-gray-500 mr-3 flex-shrink-0">
+                            {story.profileImage ? (
+                              <img
+                                src={story.profileImage}
+                                alt={story.userName}
+                                className="h-full w-full object-cover rounded-full"
+                                onError={(e) => {
+                                  const target = e.target as HTMLImageElement;
+                                  target.style.display = 'none';
+                                  const nextSibling = target.nextElementSibling as HTMLElement;
+                                  if (nextSibling) {
+                                    nextSibling.classList.remove('hidden');
+                                  }
+                                }}
+                              />
+                            ) : null}
+                            <Users className={`w-6 h-6 ${story.profileImage ? 'hidden' : ''}`} />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <h3 className="text-base font-bold text-black truncate">
+                              {story.userName}
+                            </h3>
+                            <p className="text-black font-medium text-xs truncate">{story.achievement}</p>
+                          </div>
+                        </div>
+                        <div className="flex mb-3">
+                          {[...Array(5)].map((_, i) => (
+                            <Star
+                              key={i}
+                              className={`h-4 w-4 ${
+                                i < (story.rating || 5) ? 'text-yellow-400 fill-current' : 'text-gray-300'
+                              }`}
+                            />
+                          ))}
+                        </div>
+                        <div className="flex-1 overflow-hidden">
+                          <p className="text-black italic font-medium text-sm leading-relaxed h-full overflow-hidden text-ellipsis">
+                            &quot;{story.story && story.story.length > 100 ? `${story.story.substring(0, 100)}...` : (story.story || 'Amazing transformation with WellZone Lanka!')}&quot;
+                          </p>
+                        </div>
+                        </div>
+                      ));
+                    })()}
+                  </div>
+                </div>
+              ) : (
+                /* No Stories Available - Show Message */
+                <div className="text-center py-16">
+                  <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Star className="w-8 h-8 text-gray-400" />
+                  </div>
+                  <h3 className="text-xl font-semibold text-gray-600 mb-2">No Success Stories Yet</h3>
+                  <p className="text-gray-500 mb-6">
+                    Be the first to share your transformation journey with WellZone Lanka!
+                  </p>
+                  {isLoggedIn && currentUser?.role === 'user' && (
+                    <button
+                      onClick={() => setShowStoryModal(true)}
+                      className="inline-flex items-center px-6 py-3 bg-cyan-600 text-white rounded-full hover:bg-cyan-700 transition-colors font-semibold shadow-lg hover:shadow-xl"
+                    >
+                      <Plus className="w-5 h-5 mr-2" />
+                      Share Your Success Story
+                    </button>
+                  )}
+                </div>
+              )}
 
-            {/* Testimonial 2 */}
-            <div
-              className="bg-white p-8 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 animate-fade-up opacity-0"
-              style={{ animationDelay: "0.3s" }}
+              {/* Add Story Button and View All Link - Only show when there are stories */}
+              {successStories.length > 0 && (
+                <div className="text-center mt-12 space-y-4">
+                  {isLoggedIn && currentUser?.role === 'user' && (
+                    <div className="flex flex-col sm:flex-row justify-center items-center space-y-3 sm:space-y-0 sm:space-x-4">
+                      <button
+                        onClick={() => setShowStoryModal(true)}
+                        className="inline-flex items-center px-6 py-3 bg-cyan-600 text-white rounded-full hover:bg-cyan-700 transition-colors font-semibold shadow-lg hover:shadow-xl"
+                      >
+                        <Plus className="w-5 h-5 mr-2" />
+                        Share Your Success Story
+                      </button>
+                      <Link
+                        href="/my-success-stories"
+                        className="inline-flex items-center px-4 py-2 text-cyan-600 hover:text-cyan-700 font-medium"
+                      >
+                        Manage My Stories
+                        <ChevronRight className="w-4 h-4 ml-1" />
+                      </Link>
+                    </div>
+                  )}
+                  
+                  {successStories.length >= 3 && (
+                    <div className="mt-6">
+                      <p className="text-gray-600">
+                        Want to see more inspiring transformations?
+                      </p>
+                      <Link
+                        href="/success-stories"
+                        className="inline-flex items-center mt-2 text-cyan-600 hover:text-cyan-700 font-medium"
+                      >
+                        View All Success Stories
+                        <ChevronRight className="w-4 h-4 ml-1" />
+                      </Link>
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Reviews Section */}
+      <div className="py-24 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h2 className="text-base text-cyan-600 font-semibold tracking-wide uppercase animate-fade-up opacity-0"></h2>
+            <p
+              className="mt-2 text-5xl leading-8 font-extrabold tracking-tight text-gray-900 sm:text-6xl animate-fade-up opacity-0"
+              style={{ animationDelay: "0.2s" }}
             >
-              <div className="flex items-center mb-6">
-                <div className="h-16 w-16 rounded-full overflow-hidden mr-4">
-                  <Image
-                    src="/assets/AI 2.png"
-                    alt="Client"
-                    width={64}
-                    height={64}
-                    className="h-full w-full object-cover"
-                  />
-                </div>
-                <div>
-                  <h3 className="text-xl font-bold text-gray-900">
-                    Dineth Jayasuriya
-                  </h3>
-                  <p className="text-gray-600">Gained 10kg muscle mass</p>
-                </div>
-              </div>
-              <div className="flex mb-4">
-                {[...Array(5)].map((_, i) => (
-                  <Star
-                    key={i}
-                    className="h-5 w-5 text-yellow-400 fill-current"
-                  />
-                ))}
-              </div>
-              <p className="text-gray-700 italic">
-                &quot;I had a hard time gaining weight, but the custom nutrition
-                plan changed everything. The coaches knew my goals and helped me
-                succeed.&quot;
-              </p>
-            </div>
-
-            {/* Testimonial 3 */}
-            <div className="bg-white p-8 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 animate-slide-in-right opacity-0">
-              <div className="flex items-center mb-6">
-                <div className="h-16 w-16 rounded-full overflow-hidden mr-4">
-                  <Image
-                    src="/assets/AI 3.png"
-                    alt="Client"
-                    width={64}
-                    height={64}
-                    className="h-full w-full object-cover"
-                  />
-                </div>
-                <div>
-                  <h3 className="text-xl font-bold text-gray-900">Lushy Jay</h3>
-                  <p className="text-gray-600">Improved overall wellness</p>
-                </div>
-              </div>
-              <div className="flex mb-4">
-                {[...Array(5)].map((_, i) => (
-                  <Star
-                    key={i}
-                    className="h-5 w-5 text-yellow-400 fill-current"
-                  />
-                ))}
-              </div>
-              <p className="text-gray-700 italic">
-                &quot;WellZone Lanka not only improved my fitness but also
-                helped me sleep better and feel less stressed. Their complete
-                approach really improved my well-being.&quot;
-              </p>
-            </div>
+              Client Reviews
+            </p>
+            <p
+              className="mt-4 max-w-2xl text-xl text-gray-500 mx-auto animate-fade-up opacity-0"
+              style={{ animationDelay: "0.4s" }}
+            >
+              What our clients say about their experience with WellZone Lanka
+            </p>
           </div>
+
+          {/* Loading State */}
+          {reviewsLoading ? (
+            <div className="flex justify-center items-center py-16">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-600"></div>
+              <span className="ml-3 text-gray-600">Loading reviews...</span>
+            </div>
+          ) : (
+            <>
+              {reviews.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                  {reviews.slice(0, 6).map((review: any) => (
+                    <div key={review.id} className="bg-gray-50 rounded-lg p-6 shadow-md hover:shadow-lg transition-shadow">
+                      <div className="flex items-center mb-4">
+                        <div className="flex-shrink-0">
+                          <div className="w-12 h-12 bg-cyan-100 rounded-full flex items-center justify-center">
+                            <span className="text-cyan-600 font-semibold text-lg">
+                              {review.userName ? review.userName.charAt(0).toUpperCase() : 'U'}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="ml-4">
+                          <h4 className="text-lg font-semibold text-gray-900">
+                            {review.userName || 'Anonymous'}
+                          </h4>
+                          <div className="flex items-center">
+                            {[...Array(5)].map((_, i) => (
+                              <Star
+                                key={i}
+                                className={`w-4 h-4 ${
+                                  i < review.rating ? 'text-yellow-400 fill-current' : 'text-gray-300'
+                                }`}
+                              />
+                            ))}
+                            <span className="ml-2 text-sm text-gray-600">({review.rating}/5)</span>
+                          </div>
+                        </div>
+                      </div>
+                      <p className="text-gray-700 mb-4 line-clamp-4">{review.comment}</p>
+                      <p className="text-xs text-gray-500">
+                        {new Date(review.createdAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-16">
+                  <div className="bg-gray-100 rounded-full w-24 h-24 flex items-center justify-center mx-auto mb-6">
+                    <Star className="w-12 h-12 text-gray-400" />
+                  </div>
+                  <h3 className="text-xl font-semibold text-gray-600 mb-2">No Reviews Yet</h3>
+                  <p className="text-gray-500 mb-6">Be the first to share your experience with WellZone Lanka!</p>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              {isLoggedIn && (
+                <div className="text-center mt-12">
+                  <div className="flex flex-col sm:flex-row justify-center items-center space-y-3 sm:space-y-0 sm:space-x-4">
+                    <button
+                      onClick={() => setShowReviewModal(true)}
+                      className="inline-flex items-center px-6 py-3 bg-cyan-600 text-white rounded-full hover:bg-cyan-700 transition-colors font-semibold shadow-lg hover:shadow-xl"
+                    >
+                      <Star className="w-5 h-5 mr-2" />
+                      Write a Review
+                    </button>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
         </div>
       </div>
 
@@ -723,6 +1130,22 @@ export default function Home() {
 
       <Footer />
 
+      {/* Add Success Story Modal */}
+      <AddSuccessStoryModal
+        isOpen={showStoryModal}
+        onClose={() => setShowStoryModal(false)}
+        onSubmit={handleAddStory}
+        isLoading={isSubmittingStory}
+      />
+
+      {/* Add Review Modal */}
+      <AddReviewModal
+        isOpen={showReviewModal}
+        onClose={() => setShowReviewModal(false)}
+        onSubmit={handleAddReview}
+        isLoading={isSubmittingReview}
+      />
+
       {/* Add CSS for animations */}
       <style jsx global>{`
         /* Base animation styles */
@@ -793,9 +1216,56 @@ export default function Home() {
           animation: pulseWidth 1.5s ease-in-out forwards;
         }
         
+        /* Horizontal scrolling animation for success stories */
+        @keyframes scroll {
+          0% {
+            transform: translateX(0);
+          }
+          100% {
+            transform: translateX(-50%);
+          }
+        }
+        
+        .animate-horizontal-scroll {
+          animation: scroll 30s linear infinite;
+        }
+        
+        /* Pause animation on hover */
+        .animate-horizontal-scroll:hover {
+          animation-play-state: paused;
+        }
+        
+        /* Smooth scrolling container */
+        .scroll-container {
+          overflow: hidden;
+          position: relative;
+        }
+        
+        .scroll-container::before,
+        .scroll-container::after {
+          content: '';
+          position: absolute;
+          top: 0;
+          width: 50px;
+          height: 100%;
+          z-index: 10;
+          pointer-events: none;
+        }
+        
+        .scroll-container::before {
+          left: 0;
+          background: linear-gradient(to right, rgb(249, 250, 251), transparent);
+        }
+        
+        .scroll-container::after {
+          right: 0;
+          background: linear-gradient(to left, rgb(249, 250, 251), transparent);
+        }
+        
         /* Slide animation for button icons */
         @keyframes slideRight {
-          0% { transform: translateX(-10px); opacity: 0;
+          0% { transform: translateX(-10px); opacity: 0; }
+          100% { transform: translateX(0); opacity: 1; }
         }
         
         .animate-slide-right {

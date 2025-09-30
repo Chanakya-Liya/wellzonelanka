@@ -19,7 +19,6 @@ import {
   X,
   ChevronDown,
   ChevronUp,
-  Video
 } from "lucide-react";
 
 interface Appointment {
@@ -310,6 +309,38 @@ function UserProfile() {
                     <LogOut className="w-4 h-4" />
                     <span>Log Out</span>
                   </button>
+                </div>
+              </div>
+
+              {/* Quick Actions Section */}
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mt-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
+                <div className="space-y-3">
+                  <a
+                    href="/my-success-stories"
+                    className="flex items-center space-x-3 p-3 bg-gradient-to-r from-cyan-50 to-blue-50 border border-cyan-100 rounded-lg hover:from-cyan-100 hover:to-blue-100 transition-all duration-200 group"
+                  >
+                    <div className="flex items-center justify-center w-10 h-10 bg-cyan-500 text-white rounded-lg group-hover:bg-cyan-600 transition-colors">
+                      <BookOpen className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-900">My Success Stories</p>
+                      <p className="text-sm text-gray-600">Share and manage your transformation journey</p>
+                    </div>
+                  </a>
+                  
+                  <a
+                    href="/success-stories"
+                    className="flex items-center space-x-3 p-3 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-100 rounded-lg hover:from-green-100 hover:to-emerald-100 transition-all duration-200 group"
+                  >
+                    <div className="flex items-center justify-center w-10 h-10 bg-green-500 text-white rounded-lg group-hover:bg-green-600 transition-colors">
+                      <Users className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-900">Community Stories</p>
+                      <p className="text-sm text-gray-600">Read inspiring transformations from others</p>
+                    </div>
+                  </a>
                 </div>
               </div>
             </div>
