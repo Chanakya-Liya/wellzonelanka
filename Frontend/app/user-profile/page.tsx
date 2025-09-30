@@ -18,7 +18,8 @@ import {
   Save,
   X,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Video
 } from "lucide-react";
 
 interface Appointment {
@@ -65,6 +66,16 @@ function UserProfile() {
   const [saving, setSaving] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [expandedAppointment, setExpandedAppointment] = useState<string | null>(null);
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  // Update current time every minute
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 60000); // Update every minute
+
+    return () => clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     loadUserData();
@@ -196,6 +207,57 @@ function UserProfile() {
 
   const toggleAppointmentDetails = (appointmentId: string) => {
     setExpandedAppointment(expandedAppointment === appointmentId ? null : appointmentId);
+  };
+
+  // Check if appointment is within 5 minutes
+  const isAppointmentStartingSoon = (appointment: Appointment) => {
+    const appointmentDate = new Date(appointment.date);
+    const currentDate = new Date(currentTime);
+    
+    // Check if dates match (same day)
+    const isSameDay = 
+      appointmentDate.getFullYear() === currentDate.getFullYear() &&
+      appointmentDate.getMonth() === currentDate.getMonth() &&
+      appointmentDate.getDate() === currentDate.getDate();
+    
+    if (!isSameDay) return false;
+    
+    // Parse appointment time (assuming format like "10:00 AM" or "14:30")
+    const timeStr = appointment.time.trim();
+    let hours = 0;
+    let minutes = 0;
+    
+    // Handle 12-hour format with AM/PM
+    if (timeStr.includes('AM') || timeStr.includes('PM')) {
+      const isPM = timeStr.includes('PM');
+      const timeParts = timeStr.replace(/AM|PM/gi, '').trim().split(':');
+      hours = parseInt(timeParts[0]);
+      minutes = parseInt(timeParts[1] || '0');
+      
+      // Convert to 24-hour format
+      if (isPM && hours !== 12) hours += 12;
+      if (!isPM && hours === 12) hours = 0;
+    } else {
+      // Handle 24-hour format
+      const timeParts = timeStr.split(':');
+      hours = parseInt(timeParts[0]);
+      minutes = parseInt(timeParts[1] || '0');
+    }
+    
+    // Create appointment datetime
+    const appointmentDateTime = new Date(appointmentDate);
+    appointmentDateTime.setHours(hours, minutes, 0, 0);
+    
+    // Calculate time difference in minutes
+    const timeDiffMs = appointmentDateTime.getTime() - currentTime.getTime();
+    const timeDiffMinutes = timeDiffMs / (1000 * 60);
+    
+    // Check if within 5 minutes before or after
+    return timeDiffMinutes >= -5 && timeDiffMinutes <= 5;
+  };
+
+  const handleJoinMeeting = (appointmentId: string) => {
+    window.location.href = `https://meet.jit.si/${appointmentId}`;
   };
 
   return (
@@ -438,6 +500,11 @@ function UserProfile() {
                               <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(appointment.status)}`}>
                                 {appointment.status}
                               </span>
+                              {isAppointmentStartingSoon(appointment) && (
+                                <span className="px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 animate-pulse">
+                                  Starting Soon
+                                </span>
+                              )}
                             </div>
                             
                             <p className="text-gray-600 mb-3">{appointment.serviceType}</p>
@@ -458,7 +525,16 @@ function UserProfile() {
                             </div>
                           </div>
                           
-                          <div className="ml-4">
+                          <div className="ml-4 flex flex-col space-y-2">
+                            {isAppointmentStartingSoon(appointment) && (
+                              <button 
+                                onClick={() => handleJoinMeeting(appointment.id)}
+                                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium flex items-center space-x-2 whitespace-nowrap"
+                              >
+                                <Video className="w-4 h-4" />
+                                <span>Go to Meet</span>
+                              </button>
+                            )}
                             <button 
                               onClick={() => toggleAppointmentDetails(appointment.id)}
                               className="px-3 py-1 text-cyan-600 hover:bg-cyan-50 rounded-lg transition-colors text-sm font-medium flex items-center space-x-1"

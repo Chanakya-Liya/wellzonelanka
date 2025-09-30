@@ -18,7 +18,8 @@ import {
   Phone,
   Dumbbell,
   Target,
-  TrendingUp
+  TrendingUp,
+  Video
 } from "lucide-react";
 
 export default function TrainerSessions() {
@@ -27,6 +28,16 @@ export default function TrainerSessions() {
   const [trainerId, setTrainerId] = useState<string | null>(null);
   const [sessions, setSessions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  // Update current time every minute
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 60000); // Update every minute
+
+    return () => clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     // Get trainer data from localStorage if available
@@ -69,6 +80,7 @@ export default function TrainerSessions() {
               clientAvatar: "/api/placeholder/40/40",
               sessionType: session.sessionType,
               startTime: session.time,
+              date: session.date,
               duration: session.duration || '60 min',
               status: session.date === today && session.status === 'Confirmed' ? 'active' : 
                      session.status === 'Completed' ? 'completed' : 
@@ -110,6 +122,57 @@ export default function TrainerSessions() {
     };
     
     return exerciseMap[sessionType] || ['Warm-up', 'Main Exercise', 'Cool-down'];
+  };
+
+  // Check if session is within 5 minutes
+  const isSessionStartingSoon = (session: any) => {
+    const sessionDate = new Date(session.date);
+    const currentDate = new Date(currentTime);
+    
+    // Check if dates match (same day)
+    const isSameDay = 
+      sessionDate.getFullYear() === currentDate.getFullYear() &&
+      sessionDate.getMonth() === currentDate.getMonth() &&
+      sessionDate.getDate() === currentDate.getDate();
+    
+    if (!isSameDay) return false;
+    
+    // Parse session time (assuming format like "10:00 AM" or "14:30")
+    const timeStr = session.startTime.trim();
+    let hours = 0;
+    let minutes = 0;
+    
+    // Handle 12-hour format with AM/PM
+    if (timeStr.includes('AM') || timeStr.includes('PM')) {
+      const isPM = timeStr.includes('PM');
+      const timeParts = timeStr.replace(/AM|PM/gi, '').trim().split(':');
+      hours = parseInt(timeParts[0]);
+      minutes = parseInt(timeParts[1] || '0');
+      
+      // Convert to 24-hour format
+      if (isPM && hours !== 12) hours += 12;
+      if (!isPM && hours === 12) hours = 0;
+    } else {
+      // Handle 24-hour format
+      const timeParts = timeStr.split(':');
+      hours = parseInt(timeParts[0]);
+      minutes = parseInt(timeParts[1] || '0');
+    }
+    
+    // Create session datetime
+    const sessionDateTime = new Date(sessionDate);
+    sessionDateTime.setHours(hours, minutes, 0, 0);
+    
+    // Calculate time difference in minutes
+    const timeDiffMs = sessionDateTime.getTime() - currentTime.getTime();
+    const timeDiffMinutes = timeDiffMs / (1000 * 60);
+    
+    // Check if within 5 minutes before or after
+    return timeDiffMinutes >= -5 && timeDiffMinutes <= 5;
+  };
+
+  const handleJoinMeeting = (sessionId: string) => {
+    window.location.href = `https://meet.jit.si/${sessionId}`;
   };
 
   const handleLogout = () => {
@@ -202,6 +265,7 @@ export default function TrainerSessions() {
             <div className="mb-8">
               <h1 className="text-3xl font-bold text-gray-900">My Training Sessions</h1>
               <p className="text-gray-600 mt-2">Monitor and manage your active training sessions</p>
+              <p className="text-sm text-gray-500 mt-1">Current Time: {currentTime.toLocaleTimeString()}</p>
             </div>
 
             {/* Sessions Grid */}
@@ -219,6 +283,8 @@ export default function TrainerSessions() {
               ) : (
                 sessions.map((session: any) => {
                   const StatusIcon = getStatusIcon(session.status);
+                  const showMeetingButton = isSessionStartingSoon(session);
+                  
                   return (
                     <div key={session.id} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
                       {/* Session Header */}
@@ -238,6 +304,11 @@ export default function TrainerSessions() {
                               <StatusIcon className="w-4 h-4 mr-1" />
                               {session.status.charAt(0).toUpperCase() + session.status.slice(1)}
                             </span>
+                            {showMeetingButton && (
+                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 animate-pulse">
+                                Starting Soon
+                              </span>
+                            )}
                           </div>
                         </div>
 
@@ -306,27 +377,38 @@ export default function TrainerSessions() {
 
                       {/* Action Buttons */}
                       <div className="p-6">
-                        <div className="flex space-x-3">
-                          {session.status === 'scheduled' && (
-                            <button className="flex-1 flex items-center justify-center space-x-2 px-4 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 transition-colors">
-                              <Play className="w-4 h-4" />
-                              <span>Start Session</span>
+                        <div className="flex flex-col space-y-3">
+                          {showMeetingButton && (
+                            <button 
+                              onClick={() => handleJoinMeeting(session.id)}
+                              className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
+                            >
+                              <Video className="w-5 h-5" />
+                              <span>Go to Meet</span>
                             </button>
                           )}
-                          {(session.status === 'active' || session.status === 'in-progress') && (
-                            <button className="flex-1 flex items-center justify-center space-x-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors">
-                              <Pause className="w-4 h-4" />
-                              <span>Pause Session</span>
+                          <div className="flex space-x-3">
+                            {session.status === 'scheduled' && (
+                              <button className="flex-1 flex items-center justify-center space-x-2 px-4 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 transition-colors">
+                                <Play className="w-4 h-4" />
+                                <span>Start Session</span>
+                              </button>
+                            )}
+                            {(session.status === 'active' || session.status === 'in-progress') && (
+                              <button className="flex-1 flex items-center justify-center space-x-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors">
+                                <Pause className="w-4 h-4" />
+                                <span>Pause Session</span>
+                              </button>
+                            )}
+                            <button className="flex items-center justify-center space-x-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
+                              <MessageCircle className="w-4 h-4" />
+                              <span>Message</span>
                             </button>
-                          )}
-                          <button className="flex items-center justify-center space-x-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
-                            <MessageCircle className="w-4 h-4" />
-                            <span>Message</span>
-                          </button>
-                          <button className="flex items-center justify-center space-x-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
-                            <Phone className="w-4 h-4" />
-                            <span>Call</span>
-                          </button>
+                            <button className="flex items-center justify-center space-x-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
+                              <Phone className="w-4 h-4" />
+                              <span>Call</span>
+                            </button>
+                          </div>
                         </div>
                       </div>
                     </div>
