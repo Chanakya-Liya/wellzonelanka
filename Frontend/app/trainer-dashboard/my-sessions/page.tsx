@@ -124,7 +124,7 @@ export default function TrainerSessions() {
     return exerciseMap[sessionType] || ['Warm-up', 'Main Exercise', 'Cool-down'];
   };
 
-  // Check if session is within 5 minutes
+  // Check if session is within 5 minutes before and 1 hour after (65 minutes total)
   const isSessionStartingSoon = (session: any) => {
     const sessionDate = new Date(session.date);
     const currentDate = new Date(currentTime);
@@ -167,8 +167,8 @@ export default function TrainerSessions() {
     const timeDiffMs = sessionDateTime.getTime() - currentTime.getTime();
     const timeDiffMinutes = timeDiffMs / (1000 * 60);
     
-    // Check if within 5 minutes before or after
-    return timeDiffMinutes >= -5 && timeDiffMinutes <= 5;
+    // Check if within 5 minutes before or 60 minutes after (65 minutes total window)
+    return timeDiffMinutes >= -60 && timeDiffMinutes <= 5;
   };
 
   const handleJoinMeeting = (sessionId: string) => {
@@ -306,7 +306,7 @@ export default function TrainerSessions() {
                             </span>
                             {showMeetingButton && (
                               <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 animate-pulse">
-                                Starting Soon
+                                Join Available
                               </span>
                             )}
                           </div>

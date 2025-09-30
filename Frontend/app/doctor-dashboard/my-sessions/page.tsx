@@ -140,7 +140,7 @@ export default function MySessions() {
     }
   };
 
-  // Check if session is within 5 minutes
+  // Check if session is within 5 minutes before and 1 hour after (65 minutes total)
   const isSessionStartingSoon = (session: Appointment) => {
     const sessionDate = new Date(session.date);
     const currentDate = new Date(currentTime);
@@ -183,8 +183,8 @@ export default function MySessions() {
     const timeDiffMs = sessionDateTime.getTime() - currentTime.getTime();
     const timeDiffMinutes = timeDiffMs / (1000 * 60);
     
-    // Check if within 5 minutes before or after
-    return timeDiffMinutes >= -5 && timeDiffMinutes <= 5;
+    // Check if within 5 minutes before or 60 minutes after (65 minutes total window)
+    return timeDiffMinutes >= -60 && timeDiffMinutes <= 5;
   };
 
   const handleJoinMeeting = (sessionId: string) => {
@@ -374,7 +374,7 @@ export default function MySessions() {
                           </span>
                           {isSessionStartingSoon(session) && (
                             <span className="px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 animate-pulse">
-                              Starting Soon
+                              Join Available
                             </span>
                           )}
                         </div>
