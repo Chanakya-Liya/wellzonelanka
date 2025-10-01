@@ -19,6 +19,10 @@ import {
   X,
   ChevronDown,
   ChevronUp,
+  Video,
+  BookOpen,
+  Users
+
 } from "lucide-react";
 
 interface Appointment {
